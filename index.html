@@ -149,9 +149,9 @@ async function loadEventsList(){
       const e=doc.data();
       const t=e.createdAt?e.createdAt.toDate():null;
       const timeStr=t?t.toLocaleDateString("zh-TW",{month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
-      html+=`<a class="event-card" href="index.html?id=${doc.id}" style="text-decoration:none;color:inherit">
+      html+=`<a class="event-card" href="index.html?id=${e.shortCode||doc.id}" style="text-decoration:none;color:inherit">
         <div class="info">
-          <div class="name">${esc(e.name)}</div>
+          <div class="name">${esc(e.name)} ${e.shortCode?'<span style="font-size:12px;color:#e74c3c;font-weight:600">'+esc(e.shortCode)+'</span>':''}</div>
           <div class="time">${timeStr}</div>
         </div>
         <div class="arrow">›</div>
@@ -166,17 +166,28 @@ async function loadEventsList(){
 let eventData=null;
 let items=[];
 let selectedItems={};
+let currentEventId=null;
 
 async function loadEvent(){
   try{
-    const doc=await db.collection("events").doc(eventId).get();
+    let doc=await db.collection("events").doc(eventId).get();
     if(!doc.exists){
+      const snap=await db.collection("events").where("shortCode","==",eventId.toUpperCase()).limit(1).get();
+      if(!snap.empty){doc=snap.docs[0]}
+    }
+    if(!doc||!doc.exists){
       document.getElementById("loading").innerHTML="找不到此活動";
       return;
     }
+    const realId=doc.id;
     eventData=doc.data();
+    if(realId!==eventId){
+      window.history.replaceState(null,"","index.html?id="+realId);
+    }
     document.getElementById("eventName").textContent=eventData.name;
+    document.getElementById("adminLink").href="admin.html?id="+realId;
     document.title=eventData.name+" - 快閃糾團";
+    currentEventId=realId;
     await loadItems();
     listenOrders();
     document.getElementById("loading").style.display="none";
@@ -187,7 +198,7 @@ async function loadEvent(){
 }
 
 async function loadItems(){
-  const snap=await db.collection("events").doc(eventId).collection("items").orderBy("createdAt").get();
+  const snap=await db.collection("events").doc(currentEventId).collection("items").orderBy("createdAt").get();
   items=[];
   snap.forEach(doc=>{
     items.push({id:doc.id,...doc.data()});
@@ -267,7 +278,7 @@ async function submitOrder(){
   const btn=document.getElementById("submitBtn");
   btn.disabled=true;btn.textContent="送出中...";
   try{
-    await db.collection("events").doc(eventId).collection("orders").add({
+    await db.collection("events").doc(currentEventId).collection("orders").add({
       buyerName:name,
       items:orderItems,
       totalPrice:total,
@@ -286,7 +297,7 @@ async function submitOrder(){
 }
 
 function listenOrders(){
-  db.collection("events").doc(eventId).collection("orders").orderBy("createdAt","desc")
+  db.collection("events").doc(currentEventId).collection("orders").orderBy("createdAt","desc")
     .onSnapshot(snap=>{
       const el=document.getElementById("ordersList");
       if(snap.empty){el.innerHTML='<div class="empty">目前還沒有訂單</div>';return}
