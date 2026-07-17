@@ -355,13 +355,32 @@ async function createNewEvent(){
 }
 
 async function copyShareLink(){
-  const doc=await db.collection("events").doc(currentEventId).get();
-  const sc=doc.exists?doc.data().shortCode:null;
-  const base=window.location.pathname.replace(/admin\.html.*$/,"");
-  const url=window.location.origin+base+"index.html?id="+(sc||currentEventId);
-  navigator.clipboard.writeText(url).then(()=>showToast("已複製分享連結！")).catch(()=>{
-    prompt("複製此連結分享給大家：",url);
-  });
+  try{
+    const doc=await db.collection("events").doc(currentEventId).get();
+    const sc=doc.exists?doc.data().shortCode:null;
+    const shareId=sc||currentEventId;
+    const url=window.location.origin+"/index.html?id="+shareId;
+    if(navigator.clipboard&&window.isSecureContext){
+      await navigator.clipboard.writeText(url);
+      showToast("已複製分享連結！");
+    }else{
+      showShareUrl(url);
+    }
+  }catch(e){
+    showShareUrl(window.location.origin+"/index.html?id="+currentEventId);
+  }
+}
+function showShareUrl(url){
+  const overlay=document.createElement("div");
+  overlay.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center";
+  overlay.onclick=function(e){if(e.target===overlay)overlay.remove()};
+  const box=document.createElement("div");
+  box.style.cssText="background:#fff;border-radius:12px;padding:20px;margin:16px;max-width:400px;width:100%;text-align:center";
+  box.innerHTML='<div style="font-size:15px;font-weight:600;margin-bottom:12px;color:#333">分享連結</div>'
+    +'<input type="text" value="'+url+'" readonly style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:12px;text-align:center" onclick="this.select()">'
+    +'<button style="padding:10px 24px;background:#e74c3c;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer" onclick="navigator.clipboard.writeText(\''+url+'\').then(()=>{this.textContent=\'已複製！\';setTimeout(()=>this.closest(\'div[style*=fixed]\').remove(),800)}).catch(()=>{this.select();document.execCommand(\'copy\');this.textContent=\'已複製！\'})">複製連結</button>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
 }
 
 async function loadAdminData(){
