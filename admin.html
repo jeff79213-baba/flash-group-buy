@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>管理者後台 - 快閃糾團</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#333;min-height:100vh}
+.container{max-width:480px;margin:0 auto;padding:16px}
+
+.header{text-align:center;padding:20px 0 12px}
+.header h1{font-size:20px;font-weight:700;color:#e74c3c}
+.header .back{font-size:13px;margin-top:6px}
+.header .back a{color:#999;text-decoration:none}
+
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+.card h2{font-size:15px;font-weight:600;margin-bottom:12px;color:#333;border-bottom:2px solid #e74c3c;padding-bottom:8px}
+
+.input-group{margin-bottom:12px}
+.input-group label{display:block;font-size:13px;color:#666;margin-bottom:4px;font-weight:500}
+.input-group input{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none}
+.input-group input:focus{border-color:#e74c3c}
+
+.btn{padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;width:100%;transition:all 0.2s}
+.btn-primary{background:#e74c3c;color:#fff}
+.btn-primary:active{background:#c0392b}
+.btn-success{background:#27ae60;color:#fff}
+.btn-success:active{background:#1e8449}
+.btn-sm{padding:8px 14px;width:auto;font-size:13px}
+.btn-outline{background:#fff;color:#e74c3c;border:1px solid #e74c3c}
+.btn-outline:active{background:#fdf0ef}
+.btn-danger{background:#e74c3c;color:#fff;font-size:12px;padding:6px 10px;width:auto}
+
+.item-edit-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0}
+.item-edit-row .name{flex:1;font-size:14px}
+.item-edit-row .price{font-size:14px;color:#e74c3c;font-weight:600;width:60px;text-align:right}
+
+.order-row{padding:10px 0;border-bottom:1px solid #f0f0f0}
+.order-row:last-child{border-bottom:none}
+.order-header{display:flex;justify-content:space-between;align-items:center}
+.order-name{font-weight:600;font-size:14px}
+.order-items{font-size:13px;color:#666;margin-top:4px;line-height:1.5}
+.order-total{font-size:13px;color:#e74c3c;font-weight:600;margin-top:4px}
+.paid-badge{display:inline-block;font-size:11px;background:#27ae60;color:#fff;padding:2px 8px;border-radius:4px}
+.unpaid-badge{display:inline-block;font-size:11px;background:#e67e22;color:#fff;padding:2px 8px;border-radius:4px}
+
+.summary-bar{display:flex;justify-content:space-between;align-items:center;padding:12px;background:#fdf0ef;border-radius:8px;margin-bottom:12px}
+.summary-bar .label{font-size:14px;color:#666}
+.summary-bar .amount{font-size:22px;font-weight:700;color:#e74c3c}
+
+.tabs{display:flex;gap:4px;margin-bottom:12px}
+.tab{flex:1;padding:10px;text-align:center;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;background:#fff;border:1px solid #ddd;transition:all 0.2s}
+.tab.active{background:#e74c3c;color:#fff;border-color:#e74c3c}
+
+.empty{text-align:center;padding:20px;color:#999;font-size:14px}
+.loading{text-align:center;padding:40px;color:#999}
+
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;opacity:0;transition:opacity 0.3s;z-index:100}
+.toast.show{opacity:1}
+
+.login-card{text-align:center;padding:40px 20px}
+.login-card h2{border:none;text-align:center;margin-bottom:20px}
+
+.pw-wrap{position:relative;display:flex;align-items:center}
+.pw-wrap input{padding-right:40px}
+.pw-toggle{position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="loading" id="loading">載入中...</div>
+
+  <div id="loginView" style="display:none">
+    <div class="header">
+      <h1>管理者後台</h1>
+      <div class="back"><a href="index.html">← 回到點餐頁</a></div>
+    </div>
+    <div class="card login-card">
+      <h2>管理者登入</h2>
+      <div class="input-group">
+        <label>活動代碼</label>
+        <input type="text" id="loginEventId" placeholder="貼上活動代碼">
+      </div>
+      <div class="input-group">
+        <label>管理密碼</label>
+        <div class="pw-wrap">
+          <input type="password" id="loginPassword" placeholder="輸入管理密碼">
+          <button type="button" class="pw-toggle" onclick="togglePw('loginPassword',this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">登入</button>
+      <div style="margin-top:16px">
+        <button class="btn btn-outline" onclick="showCreateEvent()">建立新揪團</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="adminView" style="display:none">
+    <div class="header">
+      <h1>管理者後台</h1>
+      <div class="back"><a href="#" onclick="doLogout()">登出</a> · <a href="#" onclick="copyShareLink()">複製分享連結</a></div>
+    </div>
+
+    <div class="summary-bar">
+      <span class="label">訂單總金額</span>
+      <span class="amount" id="grandTotal">$0</span>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('items')">品項管理</div>
+      <div class="tab" onclick="switchTab('orders')">訂單列表</div>
+    </div>
+
+    <div id="tabItems">
+      <div class="card">
+        <h2>新增品項</h2>
+        <div style="display:flex;gap:8px">
+          <div class="input-group" style="flex:2;margin:0">
+            <input type="text" id="newItemName" placeholder="品項名稱">
+          </div>
+          <div class="input-group" style="flex:1;margin:0">
+            <input type="number" id="newItemPrice" placeholder="價格" min="0">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="addItem()">新增</button>
+      </div>
+      <div class="card">
+        <h2>品項列表</h2>
+        <div id="itemsEditList" class="empty">尚無品項</div>
+      </div>
+    </div>
+
+    <div id="tabOrders" style="display:none">
+      <div class="card">
+        <h2>訂單列表</h2>
+        <div id="ordersAdminList" class="empty">尚無訂單</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="createView" style="display:none">
+    <div class="header">
+      <h1>建立新揪團</h1>
+      <div class="back"><a href="#" onclick="backToLogin()">← 返回登入</a></div>
+    </div>
+    <div class="card">
+      <div class="input-group">
+        <label>活動名稱</label>
+        <input type="text" id="newEventName" placeholder="例：五月甜點團">
+      </div>
+      <div class="input-group">
+        <label>管理密碼</label>
+        <div class="pw-wrap">
+          <input type="password" id="newEventPassword" placeholder="管理者用的密碼">
+          <button type="button" class="pw-toggle" onclick="togglePw('newEventPassword',this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="createEvent()">建立活動</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyD3quPJCOUoUH_Um5UceWXYuUXfRpJEuyo",authDomain:"opencode-sk.firebaseapp.com",projectId:"opencode-sk",storageBucket:"opencode-sk.firebasestorage.app",messagingSenderId:"741268730945",appId:"1:741268730945:web:503cf0dfab0e9100b042c0"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore();
+
+const params=new URLSearchParams(window.location.search);
+const urlEventId=params.get("id");
+
+let currentEventId=null;
+let isAdminLoggedIn=false;
+let itemsData=[];
+let ordersData=[];
+
+document.getElementById("loading").style.display="none";
+
+if(urlEventId){
+  document.getElementById("loginEventId").value=urlEventId;
+  document.getElementById("loginView").style.display="block";
+}else{
+  document.getElementById("loginView").style.display="block";
+}
+
+async function doLogin(){
+  const eid=document.getElementById("loginEventId").value.trim();
+  const pw=document.getElementById("loginPassword").value.trim();
+  if(!eid){showToast("請輸入活動代碼");return}
+  if(!pw){showToast("請輸入密碼");return}
+  try{
+    const doc=await db.collection("events").doc(eid).get();
+    if(!doc.exists){showToast("找不到此活動");return}
+    if(doc.data().adminPassword!==pw){showToast("密碼錯誤");return}
+    currentEventId=eid;
+    isAdminLoggedIn=true;
+    document.getElementById("loginView").style.display="none";
+    document.getElementById("adminView").style.display="block";
+    window.history.replaceState(null,"","admin.html?id="+eid);
+    loadAdminData();
+  }catch(e){
+    showToast("登入失敗："+e.message);
+  }
+}
+
+function doLogout(){
+  isAdminLoggedIn=false;
+  currentEventId=null;
+  document.getElementById("adminView").style.display="none";
+  document.getElementById("loginView").style.display="block";
+  window.history.replaceState(null,"","admin.html");
+}
+
+function showCreateEvent(){
+  document.getElementById("loginView").style.display="none";
+  document.getElementById("createView").style.display="block";
+}
+
+function backToLogin(){
+  document.getElementById("createView").style.display="none";
+  document.getElementById("loginView").style.display="block";
+}
+
+async function createEvent(){
+  const name=document.getElementById("newEventName").value.trim();
+  const pw=document.getElementById("newEventPassword").value.trim();
+  if(!name){showToast("請輸入活動名稱");return}
+  if(!pw){showToast("請輸入管理密碼");return}
+  try{
+    const ref=await db.collection("events").add({
+      name:name,
+      adminPassword:pw,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast("活動已建立！");
+    currentEventId=ref.id;
+    isAdminLoggedIn=true;
+    document.getElementById("createView").style.display="none";
+    document.getElementById("adminView").style.display="block";
+    window.history.replaceState(null,"","admin.html?id="+ref.id);
+    loadAdminData();
+  }catch(e){
+    showToast("建立失敗："+e.message);
+  }
+}
+
+function copyShareLink(){
+  const url=window.location.origin+"/index.html?id="+currentEventId;
+  navigator.clipboard.writeText(url).then(()=>showToast("已複製分享連結！")).catch(()=>{
+    prompt("複製此連結分享給大家：",url);
+  });
+}
+
+async function loadAdminData(){
+  await loadItemsAdmin();
+  listenOrdersAdmin();
+}
+
+async function loadItemsAdmin(){
+  const snap=await db.collection("events").doc(currentEventId).collection("items").orderBy("createdAt").get();
+  itemsData=[];
+  snap.forEach(doc=>itemsData.push({id:doc.id,...doc.data()}));
+  renderItemsEdit();
+}
+
+function renderItemsEdit(){
+  const el=document.getElementById("itemsEditList");
+  if(itemsData.length===0){el.innerHTML='<div class="empty">尚無品項</div>';return}
+  el.innerHTML=itemsData.map(item=>`
+    <div class="item-edit-row">
+      <div class="name">${esc(item.name)}</div>
+      <div class="price">$${item.price}</div>
+      <button class="btn-danger" onclick="deleteItem('${item.id}')">刪除</button>
+    </div>
+  `).join("");
+}
+
+async function addItem(){
+  const name=document.getElementById("newItemName").value.trim();
+  const price=parseInt(document.getElementById("newItemPrice").value);
+  if(!name){showToast("請輸入品項名稱");return}
+  if(isNaN(price)||price<0){showToast("請輸入正確價格");return}
+  try{
+    await db.collection("events").doc(currentEventId).collection("items").add({
+      name:name,price:price,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById("newItemName").value="";
+    document.getElementById("newItemPrice").value="";
+    showToast("品項已新增");
+    await loadItemsAdmin();
+  }catch(e){
+    showToast("新增失敗："+e.message);
+  }
+}
+
+async function deleteItem(id){
+  if(!confirm("確定刪除此品項？"))return;
+  try{
+    await db.collection("events").doc(currentEventId).collection("items").doc(id).delete();
+    showToast("品項已刪除");
+    await loadItemsAdmin();
+  }catch(e){
+    showToast("刪除失敗："+e.message);
+  }
+}
+
+function listenOrdersAdmin(){
+  db.collection("events").doc(currentEventId).collection("orders").orderBy("createdAt","desc")
+    .onSnapshot(snap=>{
+      ordersData=[];
+      let total=0;
+      snap.forEach(doc=>{
+        const o={id:doc.id,...doc.data()};
+        ordersData.push(o);
+        total+=o.totalPrice;
+      });
+      document.getElementById("grandTotal").textContent="$"+total;
+      renderOrdersAdmin();
+    });
+}
+
+function renderOrdersAdmin(){
+  const el=document.getElementById("ordersAdminList");
+  if(ordersData.length===0){el.innerHTML='<div class="empty">尚無訂單</div>';return}
+  el.innerHTML=ordersData.map(o=>{
+    const detail=o.items.map(i=>i.name+" x"+i.qty+" ($"+i.price*i.qty+")").join("、");
+    const badge=o.isPaid?'<span class="paid-badge">已收款</span>':'<span class="unpaid-badge">未收款</span>';
+    const btn=o.isPaid
+      ?`<button class="btn btn-outline btn-sm" onclick="togglePaid('${o.id}',false)">取消收款</button>`
+      :`<button class="btn btn-success btn-sm" onclick="togglePaid('${o.id}',true)">已收款</button>`;
+    return`<div class="order-row">
+      <div class="order-header">
+        <span class="order-name">${esc(o.buyerName)} ${badge}</span>
+      </div>
+      <div class="order-items">${esc(detail)}</div>
+      <div class="order-total">合計 $${o.totalPrice}</div>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        ${btn}
+        <button class="btn-danger" onclick="deleteOrder('${o.id}')">刪除</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function togglePaid(orderId,paid){
+  try{
+    await db.collection("events").doc(currentEventId).collection("orders").doc(orderId).update({isPaid:paid});
+    showToast(paid?"已標記為已收款":"已取消收款");
+  }catch(e){
+    showToast("操作失敗："+e.message);
+  }
+}
+
+async function deleteOrder(orderId){
+  if(!confirm("確定刪除此訂單？"))return;
+  try{
+    await db.collection("events").doc(currentEventId).collection("orders").doc(orderId).delete();
+    showToast("訂單已刪除");
+  }catch(e){
+    showToast("刪除失敗："+e.message);
+  }
+}
+
+function switchTab(tab){
+  document.querySelectorAll(".tab").forEach((t,i)=>{
+    t.classList.toggle("active",(tab==="items"&&i===0)||(tab==="orders"&&i===1));
+  });
+  document.getElementById("tabItems").style.display=tab==="items"?"block":"none";
+  document.getElementById("tabOrders").style.display=tab==="orders"?"block":"none";
+}
+
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2000);
+}
+function togglePw(inputId,btn){
+  const inp=document.getElementById(inputId);
+  const show=inp.type==="password";
+  inp.type=show?"text":"password";
+  btn.innerHTML=show
+    ?'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    :'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+</script>
+</body>
+</html>
