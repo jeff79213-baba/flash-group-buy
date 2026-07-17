@@ -97,6 +97,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
         <button class="btn btn-outline" onclick="showCreateEvent()">建立新揪團</button>
       </div>
     </div>
+    <div class="card" style="margin-top:12px">
+      <h2>所有活動</h2>
+      <div id="allEventsList" class="empty">載入中...</div>
+    </div>
   </div>
 
   <div id="adminView" style="display:none">
@@ -219,8 +223,54 @@ document.getElementById("loading").style.display="none";
 if(urlEventId){
   document.getElementById("loginEventId").value=urlEventId;
   document.getElementById("loginView").style.display="block";
+  loadAllEvents();
 }else{
   document.getElementById("loginView").style.display="block";
+  loadAllEvents();
+}
+
+async function loadAllEvents(){
+  try{
+    const snap=await db.collection("events").orderBy("createdAt","desc").get();
+    const el=document.getElementById("allEventsList");
+    if(snap.empty){el.innerHTML='<div class="empty">尚無活動</div>';return}
+    let html="";
+    snap.forEach(doc=>{
+      const e=doc.data();
+      const t=e.createdAt?e.createdAt.toDate():null;
+      const timeStr=t?t.toLocaleDateString("zh-TW",{month:"short",day:"numeric"}):"";
+      html+=`<div class="item-edit-row">
+        <div class="name">${esc(e.name)}<br><span style="font-size:11px;color:#999">${e.shortCode?'代碼：'+esc(e.shortCode):'無代碼'} · ${timeStr}</span></div>
+        <button class="btn-danger" onclick="deleteEventDirect('${doc.id}','${esc(e.name)}')">刪除</button>
+      </div>`;
+    });
+    el.innerHTML=html;
+  }catch(e){
+    document.getElementById("allEventsList").innerHTML='<div class="empty">載入失敗</div>';
+  }
+}
+
+async function deleteEventDirect(id,name){
+  if(!confirm("確定刪除「"+name+"」？此動作無法復原！"))return;
+  try{
+    const doc=await db.collection("events").doc(id).get();
+    if(!doc.exists){showToast("活動不存在");return}
+    const pw=doc.data().adminPassword;
+    const input=prompt("請輸入此活動的管理密碼以確認刪除：");
+    if(input===null)return;
+    if(input!==pw){showToast("密碼錯誤，無法刪除");return}
+    const itemsSnap=await db.collection("events").doc(id).collection("items").get();
+    const ordersSnap=await db.collection("events").doc(id).collection("orders").get();
+    const batch=db.batch();
+    itemsSnap.forEach(d=>batch.delete(d.ref));
+    ordersSnap.forEach(d=>batch.delete(d.ref));
+    batch.delete(db.collection("events").doc(id));
+    await batch.commit();
+    showToast("已刪除「"+name+"」");
+    loadAllEvents();
+  }catch(e){
+    showToast("刪除失敗："+e.message);
+  }
 }
 
 async function doLogin(){
