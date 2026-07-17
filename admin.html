@@ -160,6 +160,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
           <button type="button" class="pw-toggle" onclick="togglePw('newEventPassword',this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </div>
+      <div class="input-group">
+        <label>活動代碼（自己設定，方便記憶）</label>
+        <input type="text" id="newEventShortCode" placeholder="例：may2025" maxlength="20">
+      </div>
       <button class="btn btn-primary" onclick="createNewEvent()">建立活動</button>
     </div>
   </div>
@@ -238,27 +242,23 @@ function backToLogin(){
   document.getElementById("loginView").style.display="block";
 }
 
-function genShortCode(){
-  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let c="";
-  for(let i=0;i<6;i++) c+=chars[Math.floor(Math.random()*chars.length)];
-  return c;
-}
-
 async function createNewEvent(){
   const name=document.getElementById("newEventName").value.trim();
   const pw=document.getElementById("newEventPassword").value.trim();
+  const sc=document.getElementById("newEventShortCode").value.trim().toUpperCase();
   if(!name){showToast("請輸入活動名稱");return}
   if(!pw){showToast("請輸入管理密碼");return}
+  if(!sc){showToast("請輸入活動代碼");return}
   try{
-    const shortCode=genShortCode();
+    const dup=await db.collection("events").where("shortCode","==",sc).limit(1).get();
+    if(!dup.empty){showToast("此代碼已被使用，請換一個");return}
     const ref=await db.collection("events").add({
       name:name,
       adminPassword:pw,
-      shortCode:shortCode,
+      shortCode:sc,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
-    showToast("活動已建立！短碼："+shortCode);
+    showToast("活動已建立！");
     currentEventId=ref.id;
     isAdminLoggedIn=true;
     document.getElementById("createView").style.display="none";
