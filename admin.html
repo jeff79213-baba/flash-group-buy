@@ -273,7 +273,8 @@ async function createNewEvent(){
 async function copyShareLink(){
   const doc=await db.collection("events").doc(currentEventId).get();
   const sc=doc.exists?doc.data().shortCode:null;
-  const url=window.location.origin+"/index.html?id="+(sc||currentEventId);
+  const base=window.location.pathname.replace(/admin\.html.*$/,"");
+  const url=window.location.origin+base+"index.html?id="+(sc||currentEventId);
   navigator.clipboard.writeText(url).then(()=>showToast("已複製分享連結！")).catch(()=>{
     prompt("複製此連結分享給大家：",url);
   });
