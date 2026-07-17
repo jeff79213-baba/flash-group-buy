@@ -274,9 +274,10 @@ async function deleteEventDirect(id,name){
 }
 
 async function doLogin(){
-  const eid=document.getElementById("loginEventId").value.trim().toUpperCase();
+  const raw=document.getElementById("loginEventId").value.trim();
+  const eid=raw.toUpperCase();
   const pw=document.getElementById("loginPassword").value.trim();
-  if(!eid){showToast("請輸入活動代碼");return}
+  if(!raw){showToast("請輸入活動代碼");return}
   if(!pw){showToast("請輸入密碼");return}
   try{
     let docSnap=null;
@@ -286,8 +287,13 @@ async function doLogin(){
       docSnap=snap.docs[0];
       foundId=docSnap.id;
     }else{
-      docSnap=await db.collection("events").doc(eid).get();
-      foundId=eid;
+      docSnap=await db.collection("events").doc(raw).get();
+      if(docSnap.exists){
+        foundId=raw;
+      }else{
+        docSnap=await db.collection("events").doc(eid).get();
+        foundId=eid;
+      }
     }
     if(!docSnap||!docSnap.exists){showToast("找不到此活動");return}
     if(docSnap.data().adminPassword!==pw){showToast("密碼錯誤");return}
