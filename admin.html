@@ -112,11 +112,41 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
     </div>
 
     <div class="tabs">
-      <div class="tab active" onclick="switchTab('items')">品項管理</div>
+      <div class="tab active" onclick="switchTab('settings')">活動設定</div>
+      <div class="tab" onclick="switchTab('items')">品項管理</div>
       <div class="tab" onclick="switchTab('orders')">訂單列表</div>
     </div>
 
-    <div id="tabItems">
+    <div id="tabSettings">
+      <div class="card">
+        <h2>活動資訊</h2>
+        <div class="input-group">
+          <label>活動名稱</label>
+          <input type="text" id="editEventName">
+        </div>
+        <div class="input-group">
+          <label>活動代碼</label>
+          <input type="text" id="editEventShortCode" maxlength="20">
+        </div>
+        <div class="input-group">
+          <label>管理密碼</label>
+          <div class="pw-wrap">
+            <input type="password" id="editEventPassword">
+            <button type="button" class="pw-toggle" onclick="togglePw('editEventPassword',this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>收單時間</label>
+          <input type="datetime-local" id="editEventDeadline">
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="saveEventSettings()">儲存設定</button>
+          <button class="btn btn-danger" style="flex:1" onclick="deleteEvent()">刪除活動</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabItems" style="display:none">
       <div class="card">
         <h2>新增品項</h2>
         <div style="display:flex;gap:8px">
@@ -283,11 +313,62 @@ async function copyShareLink(){
 async function loadAdminData(){
   const doc=await db.collection("events").doc(currentEventId).get();
   if(doc.exists){
-    const sc=doc.data().shortCode;
+    const d=doc.data();
+    const sc=d.shortCode;
     if(sc) document.getElementById("shortCodeDisplay").textContent="活動代碼："+sc;
+    document.getElementById("editEventName").value=d.name||"";
+    document.getElementById("editEventShortCode").value=sc||"";
+    document.getElementById("editEventPassword").value=d.adminPassword||"";
+    if(d.deadline){
+      const dt=new Date(d.deadline.seconds*1000);
+      const local=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
+      document.getElementById("editEventDeadline").value=local;
+    }
   }
   await loadItemsAdmin();
   listenOrdersAdmin();
+}
+
+async function saveEventSettings(){
+  const name=document.getElementById("editEventName").value.trim();
+  const sc=document.getElementById("editEventShortCode").value.trim().toUpperCase();
+  const pw=document.getElementById("editEventPassword").value.trim();
+  const dl=document.getElementById("editEventDeadline").value;
+  if(!name){showToast("請輸入活動名稱");return}
+  if(!pw){showToast("請輸入管理密碼");return}
+  if(!sc){showToast("請輸入活動代碼");return}
+  try{
+    const dup=await db.collection("events").where("shortCode","==",sc).limit(1).get();
+    if(!dup.empty&&dup.docs[0].id!==currentEventId){showToast("此代碼已被其他活動使用");return}
+    const update={name:name,shortCode:sc,adminPassword:pw};
+    if(dl){
+      update.deadline=firebase.firestore.Timestamp.fromDate(new Date(dl));
+    }else{
+      update.deadline=firebase.firestore.FieldValue.delete();
+    }
+    await db.collection("events").doc(currentEventId).update(update);
+    showToast("設定已儲存！");
+  }catch(e){
+    showToast("儲存失敗："+e.message);
+  }
+}
+
+async function deleteEvent(){
+  if(!confirm("確定要刪除此活動？所有品項和訂單都會一起刪除，無法復原！"))return;
+  if(!confirm("真的要刪除嗎？"))return;
+  try{
+    const itemsSnap=await db.collection("events").doc(currentEventId).collection("items").get();
+    const ordersSnap=await db.collection("events").doc(currentEventId).collection("orders").get();
+    const batch=db.batch();
+    itemsSnap.forEach(doc=>batch.delete(doc.ref));
+    ordersSnap.forEach(doc=>batch.delete(doc.ref));
+    batch.delete(db.collection("events").doc(currentEventId));
+    await batch.commit();
+    showToast("活動已刪除");
+    doLogout();
+  }catch(e){
+    showToast("刪除失敗："+e.message);
+  }
 }
 
 async function loadItemsAdmin(){
@@ -397,8 +478,9 @@ async function deleteOrder(orderId){
 
 function switchTab(tab){
   document.querySelectorAll(".tab").forEach((t,i)=>{
-    t.classList.toggle("active",(tab==="items"&&i===0)||(tab==="orders"&&i===1));
+    t.classList.toggle("active",(tab==="settings"&&i===0)||(tab==="items"&&i===1)||(tab==="orders"&&i===2));
   });
+  document.getElementById("tabSettings").style.display=tab==="settings"?"block":"none";
   document.getElementById("tabItems").style.display=tab==="items"?"block":"none";
   document.getElementById("tabOrders").style.display=tab==="orders"?"block":"none";
 }
