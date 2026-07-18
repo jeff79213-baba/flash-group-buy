@@ -4,9 +4,6 @@ https://github.com/jeff79213-baba/flash-group-buy
 --- GitHub Pages ---
 https://jeff79213-baba.github.io/flash-group-buy/
 
---- Firebase Hosting ---
-https://opencode-sk.web.app
-
 --- 本機預覽 ---
 http://localhost:8080
 
