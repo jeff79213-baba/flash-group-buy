@@ -359,7 +359,8 @@ async function copyShareLink(){
     const doc=await db.collection("events").doc(currentEventId).get();
     const sc=doc.exists?doc.data().shortCode:null;
     const shareId=sc||currentEventId;
-    const url=window.location.origin+"/index.html?id="+shareId;
+    const basePath=window.location.pathname.replace(/admin\.html.*$/,"");
+    const url=window.location.origin+basePath+"index.html?id="+shareId;
     if(navigator.clipboard&&window.isSecureContext){
       await navigator.clipboard.writeText(url);
       showToast("已複製分享連結！");
@@ -367,7 +368,8 @@ async function copyShareLink(){
       showShareUrl(url);
     }
   }catch(e){
-    showShareUrl(window.location.origin+"/index.html?id="+currentEventId);
+    const basePath=window.location.pathname.replace(/admin\.html.*$/,"");
+    showShareUrl(window.location.origin+basePath+"index.html?id="+currentEventId);
   }
 }
 function showShareUrl(url){
