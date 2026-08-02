@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    // 該 uid 是否為某活動的管理員（透過 fgq_sessions 判斷）
+    function isAdmin(eventId) {
+      return isLoggedIn()
+        && get(/databases/$(database)/documents/fgq_sessions/$(request.auth.uid)).data.eventId == eventId;
+    }
+
+    // ---- fgq_sessions：登入憑證 ----
+    // create：驗證輸入的 adminPassword 與 fgq_admin 相符
+    match /fgq_sessions/{uid} {
+      allow create: if isLoggedIn()
+        && request.auth.uid == uid
+        && request.resource.data.eventId != null
+        && request.resource.data.adminPassword != null
+        && get(/databases/$(database)/documents/fgq_admin/$(request.resource.data.eventId)).data.adminPassword
+             == request.resource.data.adminPassword;
+      allow read, delete: if isLoggedIn() && request.auth.uid == uid;
+      allow update: if false;
+    }
+
+    // ---- fgq_admin：管理密碼（一般使用者不可讀）----
+    match /fgq_admin/{eventId} {
+      allow read: if isAdmin(eventId);
+      allow create: if isLoggedIn();
+      allow update, delete: if isAdmin(eventId);
+    }
+
+    // ---- fgq_events：活動 ----
+    match /fgq_events/{eventId} {
+      allow read: if isLoggedIn();
+      // 建立活動：任何登入者可建；密碼不能放在這
+      allow create: if isLoggedIn()
+        && request.resource.data.adminPassword == null
+        && request.resource.data.name is string
+        && request.resource.data.shortCode is string;
+      // 修改/刪除活動：管理員
+      allow update, delete: if isAdmin(eventId);
+
+      // 品項
+      match /items/{itemId} {
+        allow read: if isLoggedIn();
+        allow write: if isAdmin(eventId);
+      }
+
+      // 計數器：管理員可直接寫；一般使用者僅能遞增（下單流程）
+      match /counters/{counterId} {
+        allow read: if isLoggedIn();
+        allow write: if isAdmin(eventId);
+        allow create: if isLoggedIn() && request.resource.data.sold >= 1;
+        allow update: if isLoggedIn()
+          && request.resource.data.sold >= resource.data.sold
+          && request.resource.data.sold - resource.data.sold <= 99;
+      }
+
+      // 洗單防護：每 uid 最後下單時間
+      match /rate_limits/{uid} {
+        allow read: if isLoggedIn();
+        allow write: if isLoggedIn() && request.auth.uid == uid;
+      }
+
+      // 訂單
+      match /orders/{orderId} {
+        allow read: if isLoggedIn();
+
+        // 下單：登入者、createdBy=自己、editCount=0、isPaid=false、
+        //       品項非空、不含 phoneLast3、10 秒內同 uid 未下單
+        allow create: if isLoggedIn()
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.editCount == 0
+          && request.resource.data.isPaid == false
+          && request.resource.data.items is list
+          && request.resource.data.items.size() > 0
+          && request.resource.data.phoneLast3 == null
+          && (!exists(/databases/$(database)/documents/fgq_events/$(eventId)/rate_limits/$(request.auth.uid))
+              || request.time
+                 - get(/databases/$(database)/documents/fgq_events/$(eventId)/rate_limits/$(request.auth.uid)).data.lastOrderAt
+                 >= duration.value(10, 's'));
+
+        // 修改：本人、editCount < 3、createdBy 不變、editCount 恰 +1
+        allow update: if isLoggedIn()
+          && resource.data.createdBy == request.auth.uid
+          && resource.data.editCount < 3
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.editCount == resource.data.editCount + 1;
+
+        // 刪除：本人或管理員
+        allow delete: if (isLoggedIn() && resource.data.createdBy == request.auth.uid)
+          || isAdmin(eventId);
+      }
+    }
+
+    // ---- fgq_orders_phones：手機後三碼（巢狀，管理者依 eventId 查）----
+    match /fgq_orders_phones/{eventId}/{orderId} {
+      allow read: if isAdmin(eventId);
+      // 下單流程以 transaction 寫入
+      allow create, update: if isLoggedIn();
+      allow delete: if isAdmin(eventId);
+    }
+  }
+}
