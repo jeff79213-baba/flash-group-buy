@@ -52,10 +52,11 @@ fgq_events/{eventId}/counters/{itemId}   已售數量計數器（品項層）
 fgq_events/{eventId}/counters/__total   已售數量計數器（活動層）
   └── sold: number                       活動全部訂單的品項總量
 
-fgq_phones/{orderId}          手機後三碼（獨立集合，僅管理者可讀）
-  ├── eventId: string
-  ├── phoneLast3: string
-  └── createdAt: timestamp
+fgq_orders_phones/{eventId}/{orderId}   手機後三碼（巢狀，僅管理者可讀）
+  └── phoneLast3: string
+
+fgq_events/{eventId}/rate_limits/{uid}  洗單防護：每使用者最後下單時間
+  └── lastOrderAt: timestamp
 
 fgq_sessions/{uid}            管理者登入 session（一般使用者不可讀）
   ├── eventId: string         已登入的活動
@@ -99,7 +100,7 @@ fgq_sessions/{uid}            管理者登入 session（一般使用者不可讀
 ### 訂單防竄改
 
 - 訂單建立時 `createdBy` 必須 = `request.auth.uid`（規則強制）
-- 後三碼寫入 `fgq_phones/{orderId}`，只有管理者 session 可讀，一般使用者完全無法存取
+- 後三碼寫入 `fgq_orders_phones/{eventId}/{orderId}`，只有管理者 session 可讀，一般使用者完全無法存取
 - 一般使用者不可改別人的訂單（規則比對 `createdBy == request.auth.uid`）
 - `editCount` 由規則限制上限 3
 - **刪改次數提醒**：
@@ -131,7 +132,8 @@ fgq_sessions/{uid}            管理者登入 session（一般使用者不可讀
 
 ## 洗單防護
 
-- 匿名登入每裝置一 uid，規則限制：每裝置短時間內（例如 10 秒）只能下單一筆，防止連點洗單
+- 匿名登入每裝置一 uid，`fgq_events/{eventId}/rate_limits/{uid}` 記錄每使用者最後下單時間
+- 規則層檢查：同 uid 下單間隔須 ≥ 10 秒（`request.time - lastOrderAt >= duration.value(10, 's')`），防止連點洗單
 
 ## 測試策略
 
