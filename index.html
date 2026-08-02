@@ -378,10 +378,10 @@ window._submit = async function() {
       tx.set(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderRef.id), {
         phoneLast3: phone
       });
-      // 更新 counters
+      // 更新 counters（只寫有下單的品項 + __total，避免對未購買的品項建立 0 數量計數器）
       const newCounters = applyOrderCounters(orderItems, counterSnap);
-      for (const [key, val] of Object.entries(newCounters)) {
-        tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: val });
+      for (const key of ["__total", ...orderItems.map(i => i.itemId)]) {
+        tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: newCounters[key] });
       }
       // 洗單防護：記錄下單時間
       tx.set(db.collection("fgq_events").doc(currentEventId).collection("rate_limits").doc(currentUser.uid), {
