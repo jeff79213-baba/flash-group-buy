@@ -500,6 +500,8 @@ function showEditForm(order) {
       });
       overlay.remove();
       showToast("訂單已修改，名額已更新");
+      await loadCounters();
+      render();
     } catch (e) {
       showToast("修改失敗：" + e.message);
       btn.disabled = false; btn.textContent = "儲存修改";
