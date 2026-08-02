@@ -686,7 +686,7 @@ window.copyShareLink = async function() {
   }
 };
 
-function switchTab(tab) {
+window.switchTab = function(tab) {
   document.querySelectorAll(".tab").forEach((t, i) => {
     t.classList.toggle("active", (tab === "settings" && i === 0) || (tab === "items" && i === 1) || (tab === "orders" && i === 2));
   });
