@@ -137,10 +137,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
           <button type="button" class="pw-toggle" onclick="togglePw('newEventPassword',this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </div>
-      <div class="input-group">
-        <label>活動總量上限（0 = 不限，選填）</label>
-        <input type="number" id="newEventTotalLimit" value="0" min="0">
-      </div>
       <button class="btn btn-primary" onclick="createNewEvent()">建立活動</button>
     </div>
   </div>
@@ -207,10 +203,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
             <input type="number" id="newItemPrice" placeholder="價格" min="0">
           </div>
           <div class="input-group" style="flex:1;margin:0">
-            <input type="number" id="newItemLimit" placeholder="上限" value="0" min="0">
+            <input type="number" id="newItemLimit" placeholder="上限" value="0" min="0" title="此品項最多可購買幾份，0 = 不限量">
           </div>
         </div>
-        <div style="font-size:11px;color:#999;margin-top:6px">上限 0 = 不限量</div>
+        <div style="font-size:11px;color:#999;margin-top:6px" id="itemLimitHint">上限 = 此品項最多可購買份數；0 = 不限量</div>
         <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="addItem()">新增</button>
       </div>
       <div class="card">
@@ -333,7 +329,6 @@ window.createNewEvent = async function() {
   const name = document.getElementById("newEventName").value.trim();
   const sc = document.getElementById("newEventShortCode").value.trim().toUpperCase();
   const pw = document.getElementById("newEventPassword").value.trim();
-  const totalLimit = parseInt(document.getElementById("newEventTotalLimit").value) || 0;
   if (!name) { showToast("請輸入活動名稱"); return; }
   if (!pw) { showToast("請輸入管理密碼"); return; }
   if (!sc || sc.length < 3) { showToast("活動代碼需至少 3 碼"); return; }
@@ -352,7 +347,7 @@ window.createNewEvent = async function() {
       name,
       shortCode: sc,
       shareCode,
-      totalLimit,
+      totalLimit: 0,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     batch.set(db.collection("fgq_admin").doc(eventRef.id), {
@@ -491,6 +486,7 @@ window.saveEventSettings = async function() {
     eventData = { ...eventData, ...update, adminPassword: undefined };
     document.getElementById("adminEventName").textContent = name;
     document.getElementById("adminShortCode").textContent = "活動代碼：" + sc;
+    updateItemLimitHint();
     showToast("設定已儲存！");
   } catch (e) {
     showToast("儲存失敗：" + e.message);
@@ -530,6 +526,23 @@ async function loadItemsAdmin() {
   const cSnap = await db.collection("fgq_events").doc(currentEventId).collection("counters").get();
   cSnap.forEach(d => { counters[d.id] = d.data().sold || 0; });
   renderItemsEdit();
+  updateItemLimitHint();
+}
+
+// 依活動總量上限調整新增品項的上限輸入限制與提示
+function updateItemLimitHint() {
+  const totalLimit = (eventData && eventData.totalLimit) || 0;
+  const inp = document.getElementById("newItemLimit");
+  const hint = document.getElementById("itemLimitHint");
+  if (totalLimit > 0) {
+    inp.max = totalLimit;
+    inp.title = "此品項最多可購買幾份，不可超過活動總量上限 " + totalLimit + "；0 = 不限量";
+    if (hint) hint.textContent = "上限 = 此品項最多可購買份數，不可超過活動總量上限 " + totalLimit + "；0 = 不限量";
+  } else {
+    inp.removeAttribute("max");
+    inp.title = "此品項最多可購買幾份，0 = 不限量";
+    if (hint) hint.textContent = "上限 = 此品項最多可購買份數；0 = 不限量";
+  }
 }
 
 function renderItemsEdit() {
@@ -555,11 +568,17 @@ window.addItem = async function() {
   const limit = parseInt(document.getElementById("newItemLimit").value);
   if (!name) { showToast("請輸入品項名稱"); return; }
   if (isNaN(price) || price < 0) { showToast("請輸入正確價格"); return; }
+  const totalLimit = (eventData && eventData.totalLimit) || 0;
+  const effLimit = (isNaN(limit) || limit < 0) ? 0 : limit;
+  if (totalLimit > 0 && effLimit > totalLimit) {
+    showToast("品項上限不可超過活動總量上限 " + totalLimit);
+    return;
+  }
   try {
     await db.collection("fgq_events").doc(currentEventId).collection("items").add({
       name,
       price,
-      limit: (isNaN(limit) || limit < 0) ? 0 : limit,
+      limit: effLimit,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     document.getElementById("newItemName").value = "";
