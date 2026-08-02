@@ -59,7 +59,7 @@ service cloud.firestore {
         allow update: if isLoggedIn()
           && request.resource.data.sold is number
           && request.resource.data.sold >= 0
-          && abs(request.resource.data.sold - resource.data.sold) <= 99;
+          && math.abs(request.resource.data.sold - resource.data.sold) <= 99;
       }
 
       // 洗單防護：每 uid 最後下單時間

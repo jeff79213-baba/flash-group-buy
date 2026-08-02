@@ -34,17 +34,17 @@
 **Interfaces:**
 - Produces: Firebase project `flash-group-buy-sk` 存在、匿名登入已啟用、firebase 設定檔就緒
 
-- [ ] **Step 1: 確認 `flash-group-buy-sk` 專案是否已存在**
+- [x] **Step 1: 確認 `flash-group-buy-sk` 專案是否已存在**
 
 Run: `firebase projects:list`
 Expected: 列出所有專案。若 `flash-group-buy-sk` 不在清單中，執行 Step 2；若在，跳過 Step 2。
 
-- [ ] **Step 2: 建立新 Firebase 專案**
+- [x] **Step 2: 建立新 Firebase 專案**
 
 Run: `firebase projects:create flash-group-buy-sk --display-name "快閃糾團"`
 Expected: 顯示成功建立訊息。
 
-- [ ] **Step 3: 建立 `.firebaserc`**
+- [x] **Step 3: 建立 `.firebaserc`**
 
 ```json
 {
@@ -54,7 +54,7 @@ Expected: 顯示成功建立訊息。
 }
 ```
 
-- [ ] **Step 4: 建立 `firebase.json`**
+- [x] **Step 4: 建立 `firebase.json`**
 
 ```json
 {
@@ -70,11 +70,11 @@ Expected: 顯示成功建立訊息。
 
 > 註：hosting 用 GitHub Pages 部署，此處 firebase.json 主要用於 `firebase deploy --only firestore:rules`。若不要 hosting 部署可不使用 hosting 段；但保留 site 名稱符合 AGENTS.md 規範。
 
-- [ ] **Step 5: 啟用匿名登入（需 Firebase Console）**
+- [x] **Step 5: 啟用匿名登入（需 Firebase Console）**
 
 打開 https://console.firebase.google.com/project/flash-group-buy-sk/authentication 手動啟用 Anonymous 登入方法。**此步驟無法用 CLI 完成，必須手動。**
 
-- [ ] **Step 6: 驗證**
+- [x] **Step 6: 驗證**
 
 Run: `firebase projects:list | Select-String flash-group-buy-sk`
 Expected: 列出 `flash-group-buy-sk`。
@@ -89,7 +89,7 @@ Expected: 列出 `flash-group-buy-sk`。
 **Interfaces:**
 - Produces: 完整規則檔，供 Task 11 部署，供 Task 10 測試
 
-- [ ] **Step 1: 建立 `firestore.rules`**
+- [x] **Step 1: 建立 `firestore.rules`**
 
 ```javascript
 rules_version = '2';
@@ -199,13 +199,13 @@ service cloud.firestore {
 }
 ```
 
-- [ ] **Step 2: 驗證規則語法**
+- [x] **Step 2: 驗證規則語法**
 
 Run: `npx firebase-tools firestore:rules --project flash-group-buy-sk 2>&1 | Out-String` 或先執行 `firebase deploy --only firestore:rules --dry-run`（若不支援 dry-run 則略過，Task 11 正式部署時驗證）。
 
 Expected: 無語法錯誤。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add firestore.rules
@@ -225,7 +225,7 @@ git commit -m "feat: 建立 Firestore 安全規則 v2"
 - Consumes: Firebase project `flash-group-buy-sk`（Task 1）
 - Produces: `firebase-config.js` 輸出 `{ app, db }`，供 index.html/admin.html 使用
 
-- [ ] **Step 1: 建立 `firebase-config.js`**
+- [x] **Step 1: 建立 `firebase-config.js`**
 
 ```javascript
 const firebaseConfig = {
@@ -243,7 +243,7 @@ const db = firebase.firestore();
 
 > 註：此 API key 沿用原專案，實際部署前需在 Firebase Console 為 `flash-group-buy-sk` 取得正確的 web app 設定並替換。
 
-- [ ] **Step 2: 更新 `.gitignore`**
+- [x] **Step 2: 更新 `.gitignore`**
 
 確保包含（加入若缺）：
 ```
@@ -251,7 +251,7 @@ node_modules/
 .firebase/
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add firebase-config.js .gitignore
@@ -276,7 +276,7 @@ git commit -m "feat: 新增 firebase-config.js 共用設定"
   - `isShareCodeValid(shareCode, shortCode)` → boolean
   - `MAX_EDITS = 3`, `canEdit(editCount)`, `canDelete(editCount)`
 
-- [ ] **Step 1: 建立 `lib/quantity.js`**
+- [x] **Step 1: 建立 `lib/quantity.js`**
 
 ```javascript
 // 剩餘數量；limit=0 表示不限量，回傳 -1
@@ -315,7 +315,7 @@ export function applyOrderCounters(orderItems, counters) {
 }
 ```
 
-- [ ] **Step 2: 建立 `lib/sharecode.js`**
+- [x] **Step 2: 建立 `lib/sharecode.js`**
 
 ```javascript
 // 分享碼 = 活動代碼前3碼 + 3碼亂碼（大寫字母+數字）
@@ -340,7 +340,7 @@ export function isShareCodeValid(shareCode, shortCode) {
 }
 ```
 
-- [ ] **Step 3: 建立 `lib/editlimit.js`**
+- [x] **Step 3: 建立 `lib/editlimit.js`**
 
 ```javascript
 export const MAX_EDITS = 3;
@@ -358,7 +358,7 @@ export function remainingEdits(editCount) {
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add lib/
@@ -380,7 +380,7 @@ git commit -m "feat: 新增數量/分享碼/編輯限制純函式模組"
 - Consumes: Task 4 的 lib 模組
 - Produces: 通過的單元測試
 
-- [ ] **Step 1: 建立 `package.json`**
+- [x] **Step 1: 建立 `package.json`**
 
 ```json
 {
@@ -399,12 +399,12 @@ git commit -m "feat: 新增數量/分享碼/編輯限制純函式模組"
 }
 ```
 
-- [ ] **Step 2: 安裝依賴**
+- [x] **Step 2: 安裝依賴**
 
 Run: `npm install`
 Expected: 無錯誤，node_modules 建立。
 
-- [ ] **Step 3: 建立 `tests/unit/quantity.test.js`**
+- [x] **Step 3: 建立 `tests/unit/quantity.test.js`**
 
 ```javascript
 import { describe, it, expect } from "vitest";
@@ -463,7 +463,7 @@ describe("releaseOrderCounters / applyOrderCounters", () => {
 });
 ```
 
-- [ ] **Step 4: 建立 `tests/unit/sharecode.test.js`**
+- [x] **Step 4: 建立 `tests/unit/sharecode.test.js`**
 
 ```javascript
 import { describe, it, expect } from "vitest";
@@ -492,7 +492,7 @@ describe("isShareCodeValid", () => {
 });
 ```
 
-- [ ] **Step 5: 建立 `tests/unit/editlimit.test.js`**
+- [x] **Step 5: 建立 `tests/unit/editlimit.test.js`**
 
 ```javascript
 import { describe, it, expect } from "vitest";
@@ -517,7 +517,7 @@ describe("editlimit", () => {
 });
 ```
 
-- [ ] **Step 6: 建立 `vitest.config.js`**
+- [x] **Step 6: 建立 `vitest.config.js`**
 
 ```javascript
 export default {
@@ -527,12 +527,12 @@ export default {
 };
 ```
 
-- [ ] **Step 7: 執行測試**
+- [x] **Step 7: 執行測試**
 
 Run: `npm test`
 Expected: 3 個測試檔全部通過（PASS）。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add package.json package-lock.json vitest.config.js tests/
@@ -550,7 +550,7 @@ git commit -m "feat: 新增單元測試並通過"
 - Consumes: `firebase-config.js`（Task 3）、lib 模組（Task 4）
 - Produces: 完整點餐頁
 
-- [ ] **Step 1: 加入匿名登入與頁面結構**
+- [x] **Step 1: 加入匿名登入與頁面結構**
 
 在 `index.html` 的 `<body>` 內、`<script>` 頂部加入：
 
@@ -576,30 +576,30 @@ const { db } = await import("./firebase-config.js");
 await firebase.auth().signInAnonymously();
 ```
 
-- [ ] **Step 2: 實作活動載入與剩餘數量顯示**
+- [x] **Step 2: 實作活動載入與剩餘數量顯示**
 
 以 shareCode 查 `fgq_events`（用 `where("shareCode", "==", code)`），顯示活動名稱、品項列表（品項名、價格、剩餘量 `calculateRemaining(limit, sold)`），剩餘量為 0 或 -1（不限）時顯示對應狀態。
 
-- [ ] **Step 3: 實作下單（含後三碼與 transaction）**
+- [x] **Step 3: 實作下單（含後三碼與 transaction）**
 
 使用 `db.runTransaction`：讀計數器 → `validateOrderQty` → 寫入 `orders/{newId}`（`createdBy = currentUser.uid`, `editCount=0`, `isPaid=false`）→ 寫入 `fgq_orders_phones/{eventId}/orders/{newId}`（`{phoneLast3}`）→ 更新 counters → 更新 `rate_limits/{uid}`（`lastOrderAt = now`）。
 
 送出前驗證：名字非空、後三碼為 3 位數字、數量合法。
 
-- [ ] **Step 4: 實作「我的訂單」區**
+- [x] **Step 4: 實作「我的訂單」區**
 
 依 `createdBy == currentUser.uid` 過濾顯示本人訂單，含剩餘可改刪次數。改單按鈕（填新數量，transaction 釋放舊名額再扣新名額、`editCount+1`）、刪單按鈕（transaction 釋放名額、`editCount+1` 再刪、或直接刪）。達上限時按鈕停用並提示「此訂單已達修改上限，需聯絡管理者協助」。
 
-- [ ] **Step 5: 實作「所有訂單」區**
+- [x] **Step 5: 實作「所有訂單」區**
 
 顯示所有訂單（buyerName、明細、金額、已收款標記），**不顯示**手機後三碼。
 
-- [ ] **Step 6: 本機驗證**
+- [x] **Step 6: 本機驗證**
 
 Run: `npx http-server . -p 8080` 後開啟 http://localhost:8080/index.html
 Expected: 匿名登入成功、活動載入正常（需先有 Task 11 的規則與資料）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add index.html
@@ -617,7 +617,7 @@ git commit -m "feat: 點餐頁 v2（匿名登入/剩餘數量/後三碼/改刪�
 - Consumes: `firebase-config.js`、lib 模組
 - Produces: 完整後台頁
 
-- [ ] **Step 1: 建立活動（含憑證卡）**
+- [x] **Step 1: 建立活動（含憑證卡）**
 
 `<script>` 加入：
 
@@ -636,11 +636,11 @@ async function createEvent() {
 
 憑證卡顯示：活動名稱、活動代碼、管理密碼、點餐分享連結、管理後台網址，含「複製憑證文字」與「請截圖保存此頁，代碼與密碼遺失後無法取回」提示。
 
-- [ ] **Step 2: 登入**
+- [x] **Step 2: 登入**
 
 輸入活動代碼 + 管理密碼 → 查 `fgq_events where shortCode == 代碼` 得 eventId → 寫 `fgq_sessions/{uid}`（`{eventId, adminPassword}`），若 rules 拒絕（密碼錯）顯示錯誤。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add admin.html
