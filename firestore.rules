@@ -37,7 +37,7 @@ service cloud.firestore {
       allow read: if isLoggedIn();
       // 建立活動：任何登入者可建；密碼不能放在這
       allow create: if isLoggedIn()
-        && request.resource.data.adminPassword == null
+        && !("adminPassword" in request.resource.data)
         && request.resource.data.name is string
         && request.resource.data.shortCode is string;
       // 修改/刪除活動：管理員
