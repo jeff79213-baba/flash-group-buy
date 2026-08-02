@@ -1,5 +1,6 @@
 export default {
   test: {
-    environment: "node"
+    environment: "node",
+    include: ["tests/unit/**/*.test.js"]
   }
 };
