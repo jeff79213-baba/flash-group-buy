@@ -25,7 +25,6 @@ fgq_events/{eventId}
   ├── name: string            活動名稱
   ├── shortCode: string       活動代碼（管理者登入用，自訂，如 AAAA）
   ├── shareCode: string       分享碼（點餐連結用，代碼前幾碼+亂碼）
-  ├── adminPassword: string   管理密碼（登入驗證用）
   ├── deadline: timestamp     收單時間（可選）
   ├── totalLimit: number      活動總量上限（0=不限）
   ├── createdAt: timestamp
@@ -34,6 +33,9 @@ fgq_events/{eventId}
         ├── price: number     價格
         ├── limit: number     品項數量上限（0=不限）
         └── createdAt: timestamp
+
+fgq_admin/{eventId}           管理憑證（一般使用者不可讀）
+  └── adminPassword: string   管理密碼（登入驗證用）
 
 fgq_events/{eventId}/orders/{orderId}
   ├── buyerName: string       姓名（顯示於訂單）
@@ -53,6 +55,10 @@ fgq_events/{eventId}/counters/__total   已售數量計數器（活動層）
 fgq_phones/{orderId}          手機後三碼（獨立集合，僅管理者可讀）
   ├── eventId: string
   ├── phoneLast3: string
+  └── createdAt: timestamp
+
+fgq_sessions/{uid}            管理者登入 session（一般使用者不可讀）
+  ├── eventId: string         已登入的活動
   └── createdAt: timestamp
 ```
 
@@ -85,7 +91,8 @@ fgq_phones/{orderId}          手機後三碼（獨立集合，僅管理者可�
 
 管理者在 `admin.html` 輸入**活動代碼 + 管理密碼**。
 
-- 密碼驗證在規則層做：建立 `fgq_sessions/{uid}` 文件，規則檢查該文件的 `eventId + adminPassword` 與 `fgq_events` 是否相符，相符才允許寫入
+- 密碼存放於 `fgq_admin/{eventId}`（一般使用者不可讀），`fgq_events` 不存密碼
+- 密碼驗證在規則層做：建立 `fgq_sessions/{uid}` 文件，規則檢查該文件的 `eventId + adminPassword` 與 `fgq_admin/{eventId}` 是否相符，相符才允許寫入
 - 管理操作規則：`request.auth.uid in fgq_sessions` 且 session 對應該活動 → 允許
 - 密碼不以明文暴露給一般使用者
 
