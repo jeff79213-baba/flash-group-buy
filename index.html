@@ -11,343 +11,510 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#333;min-height:100vh}
 .container{max-width:480px;margin:0 auto;padding:16px}
-
 .header{text-align:center;padding:24px 0 16px}
 .header h1{font-size:22px;font-weight:700;color:#e74c3c}
 .header .event-name{font-size:16px;color:#666;margin-top:4px}
 .header .admin-link{font-size:12px;color:#999;margin-top:8px}
 .header .admin-link a{color:#999}
-
 .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
 .card h2{font-size:16px;font-weight:600;margin-bottom:12px;color:#333;border-bottom:2px solid #e74c3c;padding-bottom:8px}
-
 .item-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0}
 .item-row:last-child{border-bottom:none}
 .item-check{width:20px;height:20px;margin-right:10px;accent-color:#e74c3c;cursor:pointer}
 .item-info{flex:1}
 .item-name{font-size:15px;font-weight:500}
 .item-price{font-size:13px;color:#e74c3c;font-weight:600}
+.item-remain{font-size:12px;color:#999;margin-top:2px}
+.item-remain.soldout{color:#e74c3c;font-weight:600}
 .qty-wrap{display:flex;align-items:center;gap:4px}
 .qty-wrap button{width:28px;height:28px;border-radius:6px;border:1px solid #ddd;background:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333}
+.qty-wrap button:disabled{background:#f0f0f0;color:#ccc;cursor:not-allowed}
 .qty-wrap button:active{background:#f0f0f0}
 .qty-wrap span{width:28px;text-align:center;font-size:15px;font-weight:600}
-
 .input-group{margin-bottom:12px}
 .input-group label{display:block;font-size:13px;color:#666;margin-bottom:4px;font-weight:500}
 .input-group input{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;transition:border-color 0.2s}
 .input-group input:focus{border-color:#e74c3c}
-
 .total-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:2px solid #f0f0f0;margin-top:8px}
 .total-bar .label{font-size:14px;color:#666}
 .total-bar .amount{font-size:20px;font-weight:700;color:#e74c3c}
-
 .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.2s}
 .btn-primary{background:#e74c3c;color:#fff}
 .btn-primary:active{background:#c0392b}
 .btn-primary:disabled{background:#ccc;cursor:not-allowed}
-
+.btn-sm{width:auto;padding:6px 14px;font-size:13px;border-radius:6px;display:inline-block;border:none;cursor:pointer;font-weight:600}
+.btn-edit{background:#fff;color:#2980b9;border:1px solid #2980b9}
+.btn-del{background:#fff;color:#e74c3c;border:1px solid #e74c3c;margin-left:6px}
+.btn-sm:disabled{background:#f0f0f0;color:#ccc;border-color:#ddd;cursor:not-allowed}
 .orders-section{margin-top:16px}
 .order-item{padding:10px 0;border-bottom:1px solid #f0f0f0}
 .order-item:last-child{border-bottom:none}
-.order-name{font-weight:600;font-size:14px;color:#333}
+.order-name{font-weight:600;font-size:14px;color:#333;display:flex;align-items:center;justify-content:space-between}
 .order-detail{font-size:13px;color:#666;margin-top:2px;line-height:1.5}
 .order-total{font-size:13px;color:#e74c3c;font-weight:600;margin-top:2px}
 .order-paid{display:inline-block;font-size:11px;background:#27ae60;color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px}
-
+.order-actions{margin-top:8px;text-align:right}
+.edit-remain{font-size:11px;color:#999;margin-right:6px}
 .empty{text-align:center;padding:24px;color:#999;font-size:14px}
-
 .loading{text-align:center;padding:40px;color:#999}
-
 .deadline-bar{font-size:13px;margin-top:6px;padding:4px 12px;border-radius:6px;display:inline-block}
 .deadline-bar.active{background:#fff3cd;color:#856404}
 .deadline-bar.expired{background:#f8d7da;color:#721c24}
-
-.event-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08);display:flex;justify-content:space-between;align-items:center}
-.event-card .info{flex:1}
-.event-card .name{font-size:16px;font-weight:600;color:#333}
-.event-card .time{font-size:12px;color:#999;margin-top:4px}
-.event-card .arrow{font-size:18px;color:#ccc;margin-left:8px}
-.create-link{display:block;text-align:center;padding:16px;background:#fff;border-radius:12px;border:2px dashed #e74c3c;color:#e74c3c;font-size:15px;font-weight:600;text-decoration:none;margin-bottom:12px;transition:all 0.2s}
-.create-link:active{background:#fdf0ef}
-
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;opacity:0;transition:opacity 0.3s;z-index:100}
 .toast.show{opacity:1}
-
-.summary-table{width:100%;border-collapse:collapse;font-size:13px}
-.summary-table th{text-align:left;padding:8px 6px;border-bottom:2px solid #e74c3c;font-weight:600;font-size:12px;color:#666}
-.summary-table td{padding:8px 6px;border-bottom:1px solid #f0f0f0}
-.summary-table .total-row td{border-top:2px solid #e74c3c;font-weight:700;color:#e74c3c}
+.edit-form{margin-top:8px;padding:10px;background:#f9f9f9;border-radius:8px}
+.edit-form .row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.edit-form .row:last-child{margin-bottom:0}
+.edit-form select{flex:1;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:14px}
+.edit-form input{width:70px;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:14px;text-align:center}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal-box{background:#fff;border-radius:12px;padding:20px;margin:16px;max-width:420px;width:100%;text-align:center}
+.modal-box h3{margin-bottom:12px}
+.modal-box p{font-size:14px;color:#666;margin-bottom:16px;line-height:1.6}
+.modal-box .btn{margin-bottom:8px}
+.modal-box .btn:last-child{margin-bottom:0}
 </style>
 </head>
 <body>
 <div class="container" id="app">
   <div class="loading" id="loading">載入中...</div>
+</div>
+<div class="toast" id="toast"></div>
 
-  <div id="homeView" style="display:none">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script type="module">
+import { db } from "./firebase-config.js";
+import { calculateRemaining, validateOrderQty, applyOrderCounters, releaseOrderCounters } from "./lib/quantity.js";
+import { canEdit, canDelete, remainingEdits } from "./lib/editlimit.js";
+
+let currentUser = null;
+let currentEventId = null;
+let eventData = null;
+let items = [];
+let counters = {};        // { itemId: sold, __total: sold }
+let selected = {};        // { itemId: qty }
+let myOrders = [];        // 本人訂單
+let allOrders = [];       // 全部訂單
+
+const app = document.getElementById("app");
+
+async function init() {
+  try {
+    const auth = firebase.auth();
+    const cred = await auth.signInAnonymously();
+    currentUser = cred.user;
+    const params = new URLSearchParams(window.location.search);
+    const shareCode = params.get("id");
+    if (!shareCode) {
+      renderHome();
+    } else {
+      await loadEvent(shareCode);
+    }
+  } catch (e) {
+    document.getElementById("loading").innerHTML = "初始化失敗：" + e.message;
+  }
+}
+
+function renderHome() {
+  app.innerHTML = `
+    <div class="header"><h1>快閃糾團</h1></div>
+    <div class="card"><div class="empty">請透過管理者分享的連結開啟此頁</div></div>
+  `;
+}
+
+async function loadEvent(shareCode) {
+  const loading = document.getElementById("loading");
+  try {
+    const q = await db.collection("fgq_events").where("shareCode", "==", shareCode.toUpperCase()).limit(1).get();
+    if (q.empty) {
+      // 試試直接以 eventId 讀取
+      const doc = await db.collection("fgq_events").doc(shareCode).get();
+      if (!doc.exists) { loading.innerHTML = "找不到此活動"; return; }
+      currentEventId = doc.id;
+      eventData = doc.data();
+    } else {
+      currentEventId = q.docs[0].id;
+      eventData = q.docs[0].data();
+    }
+    document.title = eventData.name + " - 快閃糾團";
+    await Promise.all([loadItems(), loadCounters(), listenOrders()]);
+    render();
+  } catch (e) {
+    loading.innerHTML = "載入失敗：" + e.message;
+  }
+}
+
+async function loadItems() {
+  const snap = await db.collection("fgq_events").doc(currentEventId).collection("items").get();
+  items = [];
+  snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+}
+
+async function loadCounters() {
+  counters = {};
+  const snap = await db.collection("fgq_events").doc(currentEventId).collection("counters").get();
+  snap.forEach(d => { counters[d.id] = d.data().sold || 0; });
+  if (counters.__total === undefined) counters.__total = 0;
+  items.forEach(it => { if (counters[it.id] === undefined) counters[it.id] = 0; });
+}
+
+function render() {
+  const deadlinePassed = eventData.deadline && eventData.deadline.toDate() < new Date();
+  const deadlineBar = eventData.deadline
+    ? `<div class="deadline-bar ${deadlinePassed ? 'expired' : 'active'}">${deadlinePassed ? '已收單（截止：' : '收單截止：'}${eventData.deadline.toDate().toLocaleString("zh-TW", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}${deadlinePassed ? '）' : ''}</div>`
+    : "";
+
+  const itemsHtml = items.map(it => {
+    const limit = it.limit || 0;
+    const sold = counters[it.id] || 0;
+    const remain = calculateRemaining(limit, sold);
+    const soldout = limit && remain <= 0;
+    const remainTxt = !limit ? "不限量" : (soldout ? "已售完" : "剩餘 " + remain + " 份");
+    return `
+      <div class="item-row">
+        <input type="checkbox" class="item-check" data-id="${it.id}" ${deadlinePassed ? 'disabled' : ''} ${selected[it.id] ? 'checked' : ''} onchange="window._sel('${it.id}', this.checked)">
+        <div class="item-info">
+          <div class="item-name">${esc(it.name)}</div>
+          <div class="item-price">$${it.price}</div>
+          <div class="item-remain ${soldout ? 'soldout' : ''}">${remainTxt}</div>
+        </div>
+        <div class="qty-wrap">
+          <button ${soldout || deadlinePassed ? 'disabled' : ''} onclick="window._qty('${it.id}',-1)">-</button>
+          <span id="qty-${it.id}">${selected[it.id] || 0}</span>
+          <button ${soldout || deadlinePassed ? 'disabled' : ''} onclick="window._qty('${it.id}',1)">+</button>
+        </div>
+      </div>`;
+  }).join("") || '<div class="empty">管理者尚未新增品項</div>';
+
+  const subtotal = Object.entries(selected).reduce((s, [id, q]) => {
+    const it = items.find(i => i.id === id);
+    return it ? s + it.price * q : s;
+  }, 0);
+
+  app.innerHTML = `
     <div class="header">
       <h1>快閃糾團</h1>
-    </div>
-    <a class="create-link" href="admin.html">+ 建立新揪團</a>
-    <div id="eventsList" class="empty">目前還沒有揪團活動</div>
-  </div>
-
-  <div id="main" style="display:none">
-    <div class="header">
-      <h1>快閃糾團</h1>
-      <div class="event-name" id="eventName"></div>
-      <div class="deadline-bar" id="deadlineBar" style="display:none"></div>
+      <div class="event-name">${esc(eventData.name)}</div>
+      ${deadlineBar}
     </div>
 
-    <div class="card" id="orderForm">
+    <div class="card" id="orderForm" ${deadlinePassed ? 'style="display:none"' : ''}>
       <h2>選購品項</h2>
-      <div id="itemsList"></div>
+      <div id="itemsList">${itemsHtml}</div>
       <div class="total-bar">
         <span class="label">小計</span>
-        <span class="amount" id="subtotal">$0</span>
+        <span class="amount" id="subtotal">$${subtotal}</span>
       </div>
       <div style="margin-top:16px">
         <div class="input-group">
           <label>你的名字</label>
           <input type="text" id="buyerName" placeholder="輸入你的名字" maxlength="20">
         </div>
-        <button class="btn btn-primary" id="submitBtn" onclick="submitOrder()">送出訂單</button>
+        <div class="input-group">
+          <label>手機後三碼（取貨/對帳用）</label>
+          <input type="text" id="phoneLast3" placeholder="例：123" maxlength="3" inputmode="numeric" pattern="[0-9]{3}">
+        </div>
+        <button class="btn btn-primary" id="submitBtn" onclick="window._submit()">送出訂單</button>
       </div>
     </div>
 
     <div class="card orders-section">
+      <h2>我的訂單</h2>
+      <div id="myOrdersList">${renderMyOrders()}</div>
+    </div>
+
+    <div class="card orders-section">
       <h2>目前訂單</h2>
-      <div id="ordersList" class="empty">目前還沒有訂單</div>
+      <div id="allOrdersList">${renderAllOrders()}</div>
     </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script>
-const firebaseConfig={apiKey:"AIzaSyD3quPJCOUoUH_Um5UceWXYuUXfRpJEuyo",authDomain:"opencode-sk.firebaseapp.com",projectId:"opencode-sk",storageBucket:"opencode-sk.firebasestorage.app",messagingSenderId:"741268730945",appId:"1:741268730945:web:503cf0dfab0e9100b042c0"};
-firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
-
-const params=new URLSearchParams(window.location.search);
-const eventId=params.get("id");
-
-document.getElementById("loading").style.display="none";
-
-if(!eventId){
-  document.getElementById("homeView").style.display="block";
-  loadEventsList();
-}else{
-  loadEvent();
+  `;
 }
 
-async function loadEventsList(){
-  try{
-    const snap=await db.collection("events").orderBy("createdAt","desc").get();
-    const el=document.getElementById("eventsList");
-    if(snap.empty){el.innerHTML='<div class="empty">目前還沒有揪團活動<br><small style="margin-top:8px;display:block">點上方按鈕建立第一個揪團</small></div>';return}
-    let html="";
-    snap.forEach(doc=>{
-      const e=doc.data();
-      const t=e.createdAt?e.createdAt.toDate():null;
-      const timeStr=t?t.toLocaleDateString("zh-TW",{month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
-      html+=`<a class="event-card" href="index.html?id=${e.shortCode||doc.id}" style="text-decoration:none;color:inherit">
-        <div class="info">
-          <div class="name">${esc(e.name)} ${e.shortCode?'<span style="font-size:12px;color:#e74c3c;font-weight:600">'+esc(e.shortCode)+'</span>':''}</div>
-          <div class="time">${timeStr}</div>
+function renderMyOrders() {
+  if (myOrders.length === 0) return '<div class="empty">你還沒有訂單</div>';
+  return myOrders.map(o => {
+    const remain = remainingEdits(o.editCount || 0);
+    const canEditFlag = canEdit(o.editCount);
+    const canDeleteFlag = canDelete(o.editCount);
+    const detail = o.items.map(i => i.name + " x" + i.qty + " ($" + i.price * i.qty + ")").join("、");
+    return `
+      <div class="order-item">
+        <div class="order-name">
+          <span>${esc(o.buyerName)}${o.isPaid ? '<span class="order-paid">已收款</span>' : ''}</span>
         </div>
-        <div class="arrow">›</div>
-      </a>`;
+        <div class="order-detail">${esc(detail)}</div>
+        <div class="order-total">合計 $${o.totalPrice}</div>
+        <div class="order-actions">
+          <span class="edit-remain">還可改/刪 ${remain} 次</span>
+          <button class="btn-sm btn-edit" ${canEditFlag ? '' : 'disabled'} onclick="window._editOrder('${o.id}')">修改</button>
+          <button class="btn-sm btn-del" ${canDeleteFlag ? '' : 'disabled'} onclick="window._deleteOrder('${o.id}')">刪除</button>
+        </div>
+        ${canEditFlag ? '' : '<div style="font-size:11px;color:#e74c3c;margin-top:4px">此訂單已達修改上限，需聯絡管理者協助</div>'}
+      </div>`;
+  }).join("");
+}
+
+function renderAllOrders() {
+  if (allOrders.length === 0) return '<div class="empty">目前還沒有訂單</div>';
+  let grandTotal = 0;
+  const html = allOrders.map(o => {
+    grandTotal += o.totalPrice;
+    const detail = o.items.map(i => i.name + " x" + i.qty + " ($" + i.price * i.qty + ")").join("、");
+    return `
+      <div class="order-item">
+        <div class="order-name">${esc(o.buyerName)}${o.isPaid ? '<span class="order-paid">已收款</span>' : ''}</div>
+        <div class="order-detail">${esc(detail)}</div>
+        <div class="order-total">合計 $${o.totalPrice}</div>
+      </div>`;
+  }).join("");
+  return html + `<table style="width:100%;margin-top:8px;font-size:13px"><tr><td>總計</td><td style="text-align:right;font-weight:700;color:#e74c3c">$${grandTotal}</td></tr></table>`;
+}
+
+async function listenOrders() {
+  // 本人訂單
+  db.collection("fgq_events").doc(currentEventId).collection("orders")
+    .where("createdBy", "==", currentUser.uid)
+    .onSnapshot(snap => {
+      myOrders = [];
+      snap.forEach(d => myOrders.push({ id: d.id, ...d.data() }));
+      const el = document.getElementById("myOrdersList");
+      if (el) el.innerHTML = renderMyOrders();
+    }, err => console.error(err));
+
+  // 全部訂單
+  db.collection("fgq_events").doc(currentEventId).collection("orders")
+    .orderBy("createdAt", "desc")
+    .onSnapshot(snap => {
+      allOrders = [];
+      snap.forEach(d => allOrders.push({ id: d.id, ...d.data() }));
+      const el = document.getElementById("allOrdersList");
+      if (el) el.innerHTML = renderAllOrders();
+    }, err => console.error(err));
+}
+
+// 全域函式（onclick 需掛 window）
+window._sel = function(id, checked) {
+  if (checked) {
+    if (!selected[id]) selected[id] = 1;
+    document.getElementById("qty-" + id).textContent = selected[id];
+  } else {
+    selected[id] = 0;
+    document.getElementById("qty-" + id).textContent = "0";
+  }
+  updateTotal();
+};
+
+window._qty = function(id, delta) {
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  const limit = it.limit || 0;
+  const sold = counters[id] || 0;
+  const max = limit ? (limit - sold) : 9999;
+  selected[id] = Math.max(0, Math.min((selected[id] || 0) + delta, max));
+  if (selected[id] === 0) {
+    const cb = document.querySelector(`.item-check[data-id="${id}"]`);
+    if (cb) cb.checked = false;
+  }
+  document.getElementById("qty-" + id).textContent = selected[id];
+  updateTotal();
+};
+
+function updateTotal() {
+  const total = Object.entries(selected).reduce((s, [id, q]) => {
+    const it = items.find(i => i.id === id);
+    return it ? s + it.price * q : s;
+  }, 0);
+  const el = document.getElementById("subtotal");
+  if (el) el.textContent = "$" + total;
+}
+
+window._submit = async function() {
+  const name = document.getElementById("buyerName").value.trim();
+  const phone = document.getElementById("phoneLast3").value.trim();
+  if (!name) { showToast("請輸入你的名字"); return; }
+  if (!/^\d{3}$/.test(phone)) { showToast("請輸入 3 位數字手機後三碼"); return; }
+
+  const orderItems = Object.entries(selected)
+    .filter(([id, q]) => q > 0)
+    .map(([id, q]) => {
+      const it = items.find(i => i.id === id);
+      return { itemId: it.id, name: it.name, price: it.price, qty: q };
     });
-    el.innerHTML=html;
-  }catch(e){
-    document.getElementById("eventsList").innerHTML='<div class="empty">載入失敗：'+e.message+'</div>';
-  }
-}
+  if (orderItems.length === 0) { showToast("請至少選一項商品"); return; }
 
-let eventData=null;
-let items=[];
-let selectedItems={};
-let currentEventId=null;
+  const totalPrice = orderItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const limits = {};
+  limits.__total = eventData.totalLimit || 0;
+  items.forEach(it => { limits[it.id] = it.limit || 0; });
 
-async function loadEvent(){
-  try{
-    let doc=await db.collection("events").doc(eventId).get();
-    if(!doc.exists){
-      const snap=await db.collection("events").where("shortCode","==",eventId.toUpperCase()).limit(1).get();
-      if(!snap.empty){doc=snap.docs[0]}
-    }
-    if(!doc||!doc.exists){
-      document.getElementById("loading").innerHTML="找不到此活動";
-      return;
-    }
-    const realId=doc.id;
-    eventData=doc.data();
-    if(realId!==eventId){
-      window.history.replaceState(null,"","index.html?id="+realId);
-    }
-    document.getElementById("eventName").textContent=eventData.name;
-    document.title=eventData.name+" - 快閃糾團";
-    currentEventId=realId;
-    checkDeadline();
-    await loadItems();
-    listenOrders();
-    document.getElementById("loading").style.display="none";
-    document.getElementById("main").style.display="block";
-  }catch(e){
-    document.getElementById("loading").innerHTML="載入失敗："+e.message;
-  }
-}
-
-function checkDeadline(){
-  const bar=document.getElementById("deadlineBar");
-  if(!eventData||!eventData.deadline){
-    bar.style.display="none";
-    return;
-  }
-  const dl=eventData.deadline.toDate();
-  const now=new Date();
-  bar.style.display="inline-block";
-  if(now>=dl){
-    bar.className="deadline-bar expired";
-    bar.textContent="已收單（截止："+dl.toLocaleString("zh-TW",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})+"）";
-    document.getElementById("orderForm").style.display="none";
-  }else{
-    bar.className="deadline-bar active";
-    bar.textContent="收單截止："+dl.toLocaleString("zh-TW",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
-    document.getElementById("orderForm").style.display="block";
-  }
-}
-
-async function loadItems(){
-  const snap=await db.collection("events").doc(currentEventId).collection("items").orderBy("createdAt").get();
-  items=[];
-  snap.forEach(doc=>{
-    items.push({id:doc.id,...doc.data()});
-  });
-  renderItems();
-}
-
-function renderItems(){
-  const el=document.getElementById("itemsList");
-  if(items.length===0){
-    el.innerHTML='<div class="empty">管理者尚未新增品項</div>';
-    return;
-  }
-  el.innerHTML=items.map(item=>`
-    <div class="item-row">
-      <input type="checkbox" class="item-check" data-id="${item.id}" onchange="onItemCheck(this)">
-      <div class="item-info">
-        <div class="item-name">${esc(item.name)}</div>
-        <div class="item-price">$${item.price}</div>
-      </div>
-      <div class="qty-wrap">
-        <button onclick="changeQty('${item.id}',-1)">-</button>
-        <span id="qty-${item.id}">0</span>
-        <button onclick="changeQty('${item.id}',1)">+</button>
-      </div>
-    </div>
-  `).join("");
-}
-
-function onItemCheck(cb){
-  const id=cb.dataset.id;
-  if(cb.checked){
-    if(!selectedItems[id]||selectedItems[id]===0){
-      selectedItems[id]=1;
-      document.getElementById("qty-"+id).textContent="1";
-    }
-  }else{
-    selectedItems[id]=0;
-    document.getElementById("qty-"+id).textContent="0";
-  }
-  updateTotal();
-}
-
-function changeQty(id,delta){
-  if(!selectedItems[id])selectedItems[id]=0;
-  selectedItems[id]=Math.max(0,selectedItems[id]+delta);
-  document.getElementById("qty-"+id).textContent=selectedItems[id];
-  const cb=document.querySelector(`.item-check[data-id="${id}"]`);
-  if(cb)cb.checked=selectedItems[id]>0;
-  updateTotal();
-}
-
-function updateTotal(){
-  let total=0;
-  for(const id in selectedItems){
-    const item=items.find(i=>i.id===id);
-    if(item)total+=item.price*selectedItems[id];
-  }
-  document.getElementById("subtotal").textContent="$"+total;
-}
-
-async function submitOrder(){
-  const name=document.getElementById("buyerName").value.trim();
-  if(!name){showToast("請輸入你的名字");return}
-  const orderItems=[];
-  let total=0;
-  for(const id in selectedItems){
-    if(selectedItems[id]>0){
-      const item=items.find(i=>i.id===id);
-      if(item){
-        orderItems.push({name:item.name,price:item.price,qty:selectedItems[id]});
-        total+=item.price*selectedItems[id];
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true; btn.textContent = "送出中...";
+  try {
+    const result = await db.runTransaction(async tx => {
+      // 重新讀計數器
+      const counterSnap = {};
+      for (const key of ["__total", ...items.map(i => i.id)]) {
+        const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
+        const snap = await tx.get(ref);
+        counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
       }
-    }
-  }
-  if(orderItems.length===0){showToast("請至少選一项商品");return}
-  const btn=document.getElementById("submitBtn");
-  btn.disabled=true;btn.textContent="送出中...";
-  try{
-    await db.collection("events").doc(currentEventId).collection("orders").add({
-      buyerName:name,
-      items:orderItems,
-      totalPrice:total,
-      isPaid:false,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      const check = validateOrderQty(orderItems, counterSnap, limits);
+      if (!check.ok) throw new Error(check.itemId === "__total" ? "活動總量已滿" : "部分品項數量不足");
+
+      const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc();
+      const now = firebase.firestore.FieldValue.serverTimestamp();
+      tx.set(orderRef, {
+        buyerName: name,
+        items: orderItems,
+        totalPrice,
+        createdBy: currentUser.uid,
+        createdAt: now,
+        editCount: 0,
+        isPaid: false
+      });
+      // 後三碼
+      tx.set(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderRef.id), {
+        phoneLast3: phone
+      });
+      // 更新 counters
+      const newCounters = applyOrderCounters(orderItems, counterSnap);
+      for (const [key, val] of Object.entries(newCounters)) {
+        tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: val });
+      }
+      // 洗單防護：記錄下單時間
+      tx.set(db.collection("fgq_events").doc(currentEventId).collection("rate_limits").doc(currentUser.uid), {
+        lastOrderAt: now
+      });
+      return true;
     });
     showToast("訂單已送出！");
-    selectedItems={};
-    renderItems();
-    document.getElementById("buyerName").value="";
-    document.getElementById("subtotal").textContent="$0";
-  }catch(e){
-    showToast("送出失敗："+e.message);
+    selected = {};
+    document.getElementById("buyerName").value = "";
+    document.getElementById("phoneLast3").value = "";
+    await loadCounters();
+    render();
+  } catch (e) {
+    showToast("送出失敗：" + e.message);
   }
-  btn.disabled=false;btn.textContent="送出訂單";
-}
+  btn.disabled = false; btn.textContent = "送出訂單";
+};
 
-function listenOrders(){
-  db.collection("events").doc(currentEventId).collection("orders").orderBy("createdAt","desc")
-    .onSnapshot(snap=>{
-      const el=document.getElementById("ordersList");
-      if(snap.empty){el.innerHTML='<div class="empty">目前還沒有訂單</div>';return}
-      let html="";
-      let grandTotal=0;
-      snap.forEach(doc=>{
-        const o=doc.data();
-        grandTotal+=o.totalPrice;
-        const detail=o.items.map(i=>i.name+" x"+i.qty+" ($"+i.price*i.qty+")").join("、");
-        const paid=o.isPaid?'<span class="order-paid">已收款</span>':"";
-        html+=`<div class="order-item">
-          <div class="order-name">${esc(o.buyerName)}${paid}</div>
-          <div class="order-detail">${esc(detail)}</div>
-          <div class="order-total">合計 $${o.totalPrice}</div>
-        </div>`;
-      });
-      html+=`<table class="summary-table"><tr><td>總計</td><td style="text-align:right">$${grandTotal}</td></tr></table>`;
-      el.innerHTML=html;
+window._deleteOrder = async function(orderId) {
+  const order = myOrders.find(o => o.id === orderId);
+  if (!order) return;
+  if (!canDelete(order.editCount)) { showToast("已達修改上限，需聯絡管理者"); return; }
+  const remain = remainingEdits(order.editCount);
+  if (!confirm(`確定刪除此訂單？剩餘可改/刪 ${remain} 次，刪除後此筆訂單消失。`)) return;
+  try {
+    await db.runTransaction(async tx => {
+      const counterSnap = {};
+      for (const key of ["__total", ...order.items.map(i => i.itemId)]) {
+        const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
+        const snap = await tx.get(ref);
+        counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
+      }
+      const newCounters = releaseOrderCounters(order.items, counterSnap);
+      for (const [key, val] of Object.entries(newCounters)) {
+        tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: val });
+      }
+      tx.delete(db.collection("fgq_events").doc(currentEventId).collection("orders").doc(orderId));
+      tx.delete(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderId));
+      return true;
     });
+    showToast("訂單已刪除，名額已釋放");
+  } catch (e) {
+    showToast("刪除失敗：" + e.message);
+  }
+};
+
+window._editOrder = async function(orderId) {
+  const order = myOrders.find(o => o.id === orderId);
+  if (!order) return;
+  if (!canEdit(order.editCount)) { showToast("已達修改上限，需聯絡管理者"); return; }
+  showEditForm(order);
+};
+
+function showEditForm(order) {
+  const remain = remainingEdits(order.editCount);
+  const rows = order.items.map((oi, idx) => `
+    <div class="row">
+      <select id="edit-item-${idx}" style="flex:1">
+        ${items.map(it => `<option value="${it.id}" ${it.id === oi.itemId ? 'selected' : ''}>${esc(it.name)} ($${it.price})</option>`).join("")}
+      </select>
+      <input type="number" id="edit-qty-${idx}" value="${oi.qty}" min="1">
+    </div>
+  `).join("");
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h3>修改訂單</h3>
+      <p>修改後剩餘可改/刪 ${remain - 1} 次</p>
+      ${rows}
+      <div style="margin-top:16px">
+        <button class="btn btn-primary" id="saveEdit">儲存修改</button>
+        <button class="btn" style="background:#fff;color:#999;border:1px solid #ddd;margin-top:8px" onclick="this.closest('.modal-overlay').remove()">取消</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector("#saveEdit").onclick = async () => {
+    const newItems = order.items.map((_, idx) => {
+      const itemId = overlay.querySelector(`#edit-item-${idx}`).value;
+      const qty = parseInt(overlay.querySelector(`#edit-qty-${idx}`).value);
+      const it = items.find(i => i.id === itemId);
+      return { itemId, name: it.name, price: it.price, qty: qty > 0 ? qty : 1 };
+    });
+    const totalPrice = newItems.reduce((s, i) => s + i.price * i.qty, 0);
+    const limits = {};
+    limits.__total = eventData.totalLimit || 0;
+    items.forEach(it => { limits[it.id] = it.limit || 0; });
+
+    const btn = overlay.querySelector("#saveEdit");
+    btn.disabled = true; btn.textContent = "儲存中...";
+    try {
+      await db.runTransaction(async tx => {
+        const counterSnap = {};
+        const keys = ["__total", ...new Set([...order.items.map(i => i.itemId), ...newItems.map(i => i.itemId)])];
+        for (const key of keys) {
+          const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
+          const snap = await tx.get(ref);
+          counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
+        }
+        // 先釋放舊的，再加新的
+        const released = releaseOrderCounters(order.items, counterSnap);
+        const check = validateOrderQty(newItems, released, limits);
+        if (!check.ok) throw new Error(check.itemId === "__total" ? "活動總量已滿" : "部分品項數量不足");
+        const newCounters = applyOrderCounters(newItems, released);
+        for (const [key, val] of Object.entries(newCounters)) {
+          tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: val });
+        }
+        tx.update(db.collection("fgq_events").doc(currentEventId).collection("orders").doc(order.id), {
+          items: newItems,
+          totalPrice,
+          editCount: (order.editCount || 0) + 1
+        });
+        return true;
+      });
+      overlay.remove();
+      showToast("訂單已修改，名額已更新");
+    } catch (e) {
+      showToast("修改失敗：" + e.message);
+      btn.disabled = false; btn.textContent = "儲存修改";
+    }
+  };
 }
 
-function showToast(msg){
-  const t=document.getElementById("toast");
-  t.textContent=msg;t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2000);
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2000);
 }
-function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML }
+
+init();
 </script>
 </body>
 </html>

@@ -13,7 +13,7 @@
 - 所有 Firestore 集合必須以 `fgq_` 前綴開頭（spec 規定）
 - Firebase project ID：`flash-group-buy-sk`（固定）
 - 管理密碼只存 `fgq_admin/{eventId}`，**不可**放在 `fgq_events`
-- 手機後三碼只存 `fgq_orders_phones/{eventId}/{orderId}`，**不可**放在 orders
+- 手機後三碼只存 `fgq_orders_phones/{eventId}/orders/{orderId}`（巢狀子集合，管理者可列出該活動全部），**不可**放在 orders
 - 每筆訂單 `editCount` 上限 3，規則層強制
 - 訂單 `createdBy` 必須 = `request.auth.uid`，規則層強制
 - 密碼欄位必須附帶顯示/隱藏切換按鈕（AGENTS.md UI 規範）
@@ -582,7 +582,7 @@ await firebase.auth().signInAnonymously();
 
 - [ ] **Step 3: 實作下單（含後三碼與 transaction）**
 
-使用 `db.runTransaction`：讀計數器 → `validateOrderQty` → 寫入 `orders/{newId}`（`createdBy = currentUser.uid`, `editCount=0`, `isPaid=false`）→ 寫入 `fgq_orders_phones/{eventId}/{newId}`（`{phoneLast3}`）→ 更新 counters → 更新 `rate_limits/{uid}`（`lastOrderAt = now`）。
+使用 `db.runTransaction`：讀計數器 → `validateOrderQty` → 寫入 `orders/{newId}`（`createdBy = currentUser.uid`, `editCount=0`, `isPaid=false`）→ 寫入 `fgq_orders_phones/{eventId}/orders/{newId}`（`{phoneLast3}`）→ 更新 counters → 更新 `rate_limits/{uid}`（`lastOrderAt = now`）。
 
 送出前驗證：名字非空、後三碼為 3 位數字、數量合法。
 
@@ -668,7 +668,7 @@ git commit -m "feat: 後台 v2 建立活動與登入"
 
 - [ ] **Step 3: 訂單管理**
 
-訂單列表含手機後三碼（從 `fgq_orders_phones/{eventId}` 讀取）、標記已收款/取消收款、刪除訂單（管理員可刪任何，transaction 釋放名額）。
+訂單列表含手機後三碼（從 `fgq_orders_phones/{eventId}/orders` 讀取）、標記已收款/取消收款、刪除訂單（管理員可刪任何，transaction 釋放名額）。
 
 - [ ] **Step 4: Commit**
 
@@ -817,5 +817,5 @@ git push origin master
 
 **自我審查修正已完成：**
 1. ✅ 洗單防護已加入 Task 2 的 orders create 規則與 rate_limits 集合，Task 6 下單流程一併寫入 lastOrderAt
-2. ✅ 手機後三碼改為 `fgq_orders_phones/{eventId}/{orderId}` 巢狀結構，Task 2/6/8 已同步
+2. ✅ 手機後三碼改為 `fgq_orders_phones/{eventId}/orders/{orderId}` 巢狀子集合結構，Task 2/6/8 已同步
 3. ✅ 活動總量限制由 Task 4 的 `validateOrderQty` 以 `__total` counter 檢查（下單 transaction 讀活動 totalLimit + 累計總量比對）

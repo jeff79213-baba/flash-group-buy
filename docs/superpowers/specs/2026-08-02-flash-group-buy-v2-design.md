@@ -52,7 +52,7 @@ fgq_events/{eventId}/counters/{itemId}   已售數量計數器（品項層）
 fgq_events/{eventId}/counters/__total   已售數量計數器（活動層）
   └── sold: number                       活動全部訂單的品項總量
 
-fgq_orders_phones/{eventId}/{orderId}   手機後三碼（巢狀，僅管理者可讀）
+fgq_orders_phones/{eventId}/orders/{orderId}   手機後三碼（巢狀，僅管理者可讀，管理者可列出該活動全部後三碼）
   └── phoneLast3: string
 
 fgq_events/{eventId}/rate_limits/{uid}  洗單防護：每使用者最後下單時間

@@ -49,14 +49,17 @@ service cloud.firestore {
         allow write: if isAdmin(eventId);
       }
 
-      // 計數器：管理員可直接寫；一般使用者僅能遞增（下單流程）
+      // 計數器：管理員可直接寫；一般使用者僅能小幅變動（下單增加、改/刪釋放）
       match /counters/{counterId} {
         allow read: if isLoggedIn();
         allow write: if isAdmin(eventId);
-        allow create: if isLoggedIn() && request.resource.data.sold >= 1;
+        allow create: if isLoggedIn()
+          && request.resource.data.sold is number
+          && request.resource.data.sold >= 1;
         allow update: if isLoggedIn()
-          && request.resource.data.sold >= resource.data.sold
-          && request.resource.data.sold - resource.data.sold <= 99;
+          && request.resource.data.sold is number
+          && request.resource.data.sold >= 0
+          && abs(request.resource.data.sold - resource.data.sold) <= 99;
       }
 
       // 洗單防護：每 uid 最後下單時間
@@ -90,14 +93,14 @@ service cloud.firestore {
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.editCount == resource.data.editCount + 1;
 
-        // 刪除：本人或管理員
-        allow delete: if (isLoggedIn() && resource.data.createdBy == request.auth.uid)
+        // 刪除：本人（需未達 edit 上限）或管理員
+        allow delete: if (isLoggedIn() && resource.data.createdBy == request.auth.uid && resource.data.editCount < 3)
           || isAdmin(eventId);
       }
     }
 
     // ---- fgq_orders_phones：手機後三碼（巢狀，管理者依 eventId 查）----
-    match /fgq_orders_phones/{eventId}/{orderId} {
+    match /fgq_orders_phones/{eventId}/orders/{orderId} {
       allow read: if isAdmin(eventId);
       // 下單流程以 transaction 寫入
       allow create, update: if isLoggedIn();
