@@ -2,7 +2,15 @@
 https://github.com/jeff79213-baba/flash-group-buy
 
 --- GitHub Pages ---
-https://jeff79213-baba.github.io/flash-group-buy/
+點餐頁（分享碼進入）：https://jeff79213-baba.github.io/flash-group-buy/
+後台管理：https://jeff79213-baba.github.io/flash-group-buy/admin.html
+
+--- Firebase Project ---
+Project ID：flash-group-buy-sk
+Hosting Site：flash-group-buy-sk
+點餐 Firebase URL：https://flash-group-buy-sk.web.app/
+後台 Firebase URL：https://flash-group-buy-sk.web.app/admin.html
+主控台：https://console.firebase.google.com/project/flash-group-buy-sk
 
 --- 本機預覽 ---
 http://localhost:8080

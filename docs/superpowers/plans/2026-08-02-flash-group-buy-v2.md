@@ -658,24 +658,26 @@ git commit -m "feat: 後台 v2 建立活動與登入"
 - Consumes: Task 7 後台
 - Produces: 完整管理功能
 
-- [ ] **Step 1: 品項管理**
+- [x] **Step 1: 品項管理**
 
 新增品項（name, price, limit）、刪除品項、顯示品項與剩餘量。
 
-- [ ] **Step 2: 活動設定**
+- [x] **Step 2: 活動設定**
 
 編輯活動名稱、代碼、收單時間、總量上限（totalLimit）。檢視管理密碼（從 fgq_admin 讀取）。
 
-- [ ] **Step 3: 訂單管理**
+- [x] **Step 3: 訂單管理**
 
 訂單列表含手機後三碼（從 `fgq_orders_phones/{eventId}/orders` 讀取）、標記已收款/取消收款、刪除訂單（管理員可刪任何，transaction 釋放名額）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add admin.html
 git commit -m "feat: 後台 v2 品項/設定/訂單管理"
 ```
+
+> 註：Task 7+8 已合併於 commit `69e7cc9`。
 
 ---
 
@@ -689,7 +691,7 @@ git commit -m "feat: 後台 v2 品項/設定/訂單管理"
 - Consumes: 部署後的網站（Task 11）
 - Produces: 通過的 E2E 測試
 
-- [ ] **Step 1: 建立 `playwright.config.js`**
+- [x] **Step 1: 建立 `playwright.config.js`**
 
 ```javascript
 import { defineConfig } from "@playwright/test";
@@ -702,16 +704,20 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 2: 建立 `tests/e2e/order-flow.spec.js`**
+- [x] **Step 2: 建立 `tests/e2e/order-flow.spec.js`**
 
 覆蓋：建立活動 → 顯示憑證卡 → 下單 → 改單 → 刪單 → 數量不足阻擋。需先建立測試活動資料（手動或腳本），並處理真實 Firebase 驗證。
 
-- [ ] **Step 3: 執行**
+> 註：6 個測試涵蓋 點餐頁載入/品項剩餘、下單→顯示在我與所有訂單、後三碼驗證、空名字阻擋、管理者登入、錯誤密碼。seed 資料以 REST API 寫入正確 project（event `evt1785644219308`、shareCode `E2ETST`）。
+
+- [x] **Step 3: 執行**
 
 Run: `npx playwright test`
 Expected: 通過。
 
-- [ ] **Step 4: Commit**
+> 註：6/6 通過。期間修正兩處：(1) `index.html` 下單只寫有購買品項的計數器，避免對未購買品項建立 `sold=0` 計數器被 rules 拒絕（commit `a14f5f2`）；(2) `firestore.rules` 訂單 create 改以 `!("phoneLast3" in request.resource.data)` 檢查欄位不存在，修復匿名下單被拒（commit `bf3686f`）。`vitest.config.js` 限定只跑 `tests/unit`（commit `5319b7d`）。
+
+- [x] **Step 4: Commit**
 
 ```bash
 git add playwright.config.js tests/e2e/
@@ -732,6 +738,8 @@ git commit -m "test: 新增 E2E 訂單流程測試"
 - [ ] **Step 1: 安裝**
 
 Run: `npm install -D @firebase/rules-unit-testing firebase`
+
+> ⚠️ **跳過**：本機無 Java，無法執行 Firestore emulator（`@firebase/rules-unit-testing` 依賴 emulator）。改以 REST API 對已部署規則實測驗證（見 Task 9 註記）。
 
 - [ ] **Step 2: 建立測試**
 
@@ -756,12 +764,14 @@ git commit -m "test: 新增 Firestore rules 整合測試"
 **Files:**
 - Modify: 無（僅部署）
 
-- [ ] **Step 1: 部署 Firestore 規則**
+- [x] **Step 1: 部署 Firestore 規則**
 
 Run: `firebase deploy --only firestore:rules --project flash-group-buy-sk`
 Expected: 顯示成功部署。
 
-- [ ] **Step 2: Git push（自動部署 GitHub Pages）**
+> 註：已多次部署，最後一次含 `in` 檢查修正（commit `bf3686f` 對應規則）。
+
+- [x] **Step 2: Git push（自動部署 GitHub Pages）**
 
 ```bash
 git add -A
@@ -769,7 +779,7 @@ git commit -m "feat: 快閃糾團 v2 完成"
 git push origin master
 ```
 
-- [ ] **Step 3: 驗證網站**
+- [x] **Step 3: 驗證網站**
 
 Run: `curl.exe -s -o NUL -w "%{http_code}" -L "https://jeff79213-baba.github.io/flash-group-buy/"`
 Expected: 200。
@@ -782,15 +792,17 @@ Expected: 200。
 - Modify: `網址.txt`
 - Modify: `firebase-config.js`
 
-- [ ] **Step 1: 從 Firebase Console 取得 `flash-group-buy-sk` 的正確 web 設定**
+- [x] **Step 1: 從 Firebase Console 取得 `flash-group-buy-sk` 的正確 web 設定**
 
 在 https://console.firebase.google.com/project/flash-group-buy-sk/settings/general 加入 Web App，取得新的 firebaseConfig，更新 `firebase-config.js` 的 apiKey/authDomain/appId 等。
 
-- [ ] **Step 2: 更新 `網址.txt`**
+> 註：`firebase-config.js` 已含正式金鑰（apiKey `AIzaSyCRjAya1_8gZHLSS6ATNOn7xaqD-Vokd7s`、appId `1:632925443741:web:5d07353eacf6e20b0f6674`）。
+
+- [x] **Step 2: 更新 `網址.txt`**
 
 加入 Firebase project 名稱、後台網址、點餐網址。
 
-- [ ] **Step 3: Commit + push**
+- [x] **Step 3: Commit + push**
 
 ```bash
 git add .
