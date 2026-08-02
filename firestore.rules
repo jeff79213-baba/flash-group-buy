@@ -86,12 +86,13 @@ service cloud.firestore {
                  - get(/databases/$(database)/documents/fgq_events/$(eventId)/rate_limits/$(request.auth.uid)).data.lastOrderAt
                  >= duration.value(10, 's'));
 
-        // 修改：本人、editCount < 3、createdBy 不變、editCount 恰 +1
-        allow update: if isLoggedIn()
+        // 修改：本人（editCount<3、createdBy 不變、editCount 恰 +1）或管理員（標收款等）
+        allow update: if (isLoggedIn()
           && resource.data.createdBy == request.auth.uid
           && resource.data.editCount < 3
           && request.resource.data.createdBy == request.auth.uid
-          && request.resource.data.editCount == resource.data.editCount + 1;
+          && request.resource.data.editCount == resource.data.editCount + 1)
+          || isAdmin(eventId);
 
         // 刪除：本人（需未達 edit 上限）或管理員
         allow delete: if (isLoggedIn() && resource.data.createdBy == request.auth.uid && resource.data.editCount < 3)

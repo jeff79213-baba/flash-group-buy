@@ -33,11 +33,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .btn-sm{padding:8px 14px;width:auto;font-size:13px}
 .btn-outline{background:#fff;color:#e74c3c;border:1px solid #e74c3c}
 .btn-outline:active{background:#fdf0ef}
-.btn-danger{background:#e74c3c;color:#fff;font-size:12px;padding:6px 10px;width:auto}
+.btn-danger{background:#e74c3c;color:#fff;font-size:12px;padding:6px 10px;width:auto;border:none;border-radius:6px;cursor:pointer}
 
 .item-edit-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0}
 .item-edit-row .name{flex:1;font-size:14px}
 .item-edit-row .price{font-size:14px;color:#e74c3c;font-weight:600;width:60px;text-align:right}
+.item-edit-row .remain{font-size:12px;color:#999;width:70px;text-align:right}
 
 .order-row{padding:10px 0;border-bottom:1px solid #f0f0f0}
 .order-row:last-child{border-bottom:none}
@@ -68,12 +69,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .pw-wrap{position:relative;display:flex;align-items:center}
 .pw-wrap input{padding-right:40px}
 .pw-toggle{position:absolute;right:8px;background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center}
+
+.credential-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center}
+.credential-card{background:#fff;border-radius:16px;padding:24px;margin:16px;max-width:400px;width:100%;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+.credential-card h3{text-align:center;color:#e74c3c;margin-bottom:4px;font-size:18px}
+.credential-card .sub{text-align:center;color:#999;font-size:12px;margin-bottom:16px}
+.cred-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px}
+.cred-row .k{color:#666;font-size:12px}
+.cred-row .v{font-weight:600;word-break:break-all;text-align:right;margin-left:12px}
+.cred-note{margin-top:16px;padding:10px;background:#fff3cd;color:#856404;border-radius:8px;font-size:12px;line-height:1.6}
+.cred-note b{display:block}
 </style>
 </head>
 <body>
 <div class="container" id="app">
   <div class="loading" id="loading">載入中...</div>
 
+  <!-- 登入 -->
   <div id="loginView" style="display:none">
     <div class="header">
       <h1>管理者後台</h1>
@@ -83,7 +95,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
       <h2>管理者登入</h2>
       <div class="input-group">
         <label>活動代碼</label>
-        <input type="text" id="loginEventId" placeholder="貼上活動代碼">
+        <input type="text" id="loginShortCode" placeholder="例：AAAA" maxlength="20">
       </div>
       <div class="input-group">
         <label>管理密碼</label>
@@ -97,16 +109,47 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
         <button class="btn btn-outline" onclick="showCreateEvent()">建立新揪團</button>
       </div>
     </div>
-    <div class="card" style="margin-top:12px">
+    <div class="card">
       <h2>所有活動</h2>
       <div id="allEventsList" class="empty">載入中...</div>
     </div>
   </div>
 
+  <!-- 建立活動 -->
+  <div id="createView" style="display:none">
+    <div class="header">
+      <h1>建立新揪團</h1>
+      <div class="back"><a href="#" onclick="backToLogin()">← 返回登入</a></div>
+    </div>
+    <div class="card">
+      <div class="input-group">
+        <label>活動名稱</label>
+        <input type="text" id="newEventName" placeholder="例：五月甜點團">
+      </div>
+      <div class="input-group">
+        <label>活動代碼（管理者登入用，至少 3 碼，請記住）</label>
+        <input type="text" id="newEventShortCode" placeholder="例：MAY2025" maxlength="20">
+      </div>
+      <div class="input-group">
+        <label>管理密碼</label>
+        <div class="pw-wrap">
+          <input type="password" id="newEventPassword" placeholder="管理者用的密碼">
+          <button type="button" class="pw-toggle" onclick="togglePw('newEventPassword',this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>活動總量上限（0 = 不限，選填）</label>
+        <input type="number" id="newEventTotalLimit" value="0" min="0">
+      </div>
+      <button class="btn btn-primary" onclick="createNewEvent()">建立活動</button>
+    </div>
+  </div>
+
+  <!-- 後台 -->
   <div id="adminView" style="display:none">
     <div class="header">
-      <h1>管理者後台</h1>
-      <div class="back" id="shortCodeDisplay" style="font-size:16px;font-weight:700;color:#e74c3c;margin:6px 0"></div>
+      <h1 id="adminEventName">管理者後台</h1>
+      <div class="back" id="adminShortCode" style="font-size:14px;font-weight:600;color:#e74c3c;margin:6px 0"></div>
       <div class="back"><a href="#" onclick="doLogout()">登出</a> · <a href="#" onclick="copyShareLink()">複製分享連結</a></div>
     </div>
 
@@ -140,11 +183,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
           </div>
         </div>
         <div class="input-group">
-          <label>收單時間</label>
+          <label>收單時間（選填）</label>
           <input type="datetime-local" id="editEventDeadline">
         </div>
+        <div class="input-group">
+          <label>活動總量上限（0 = 不限）</label>
+          <input type="number" id="editEventTotalLimit" min="0">
+        </div>
         <button class="btn btn-primary" style="margin-bottom:8px" onclick="saveEventSettings()">儲存設定</button>
-        <button class="btn" style="background:#fff;color:#e74c3c;border:2px solid #e74c3c" onclick="deleteEvent()">刪除此活動</button>
+        <button class="btn" style="background:#fff;color:#e74c3c;border:2px solid #e74c3c" onclick="showCredentialCard()">查看憑證</button>
+        <button class="btn" style="background:#fff;color:#e74c3c;border:2px solid #e74c3c;margin-top:8px" onclick="deleteEvent()">刪除此活動</button>
       </div>
     </div>
 
@@ -158,7 +206,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
           <div class="input-group" style="flex:1;margin:0">
             <input type="number" id="newItemPrice" placeholder="價格" min="0">
           </div>
+          <div class="input-group" style="flex:1;margin:0">
+            <input type="number" id="newItemLimit" placeholder="上限" value="0" min="0">
+          </div>
         </div>
+        <div style="font-size:11px;color:#999;margin-top:6px">上限 0 = 不限量</div>
         <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="addItem()">新增</button>
       </div>
       <div class="card">
@@ -174,356 +226,399 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
       </div>
     </div>
   </div>
-
-  <div id="createView" style="display:none">
-    <div class="header">
-      <h1>建立新揪團</h1>
-      <div class="back"><a href="#" onclick="backToLogin()">← 返回登入</a></div>
-    </div>
-    <div class="card">
-      <div class="input-group">
-        <label>活動名稱</label>
-        <input type="text" id="newEventName" placeholder="例：五月甜點團">
-      </div>
-      <div class="input-group">
-        <label>管理密碼</label>
-        <div class="pw-wrap">
-          <input type="password" id="newEventPassword" placeholder="管理者用的密碼">
-          <button type="button" class="pw-toggle" onclick="togglePw('newEventPassword',this)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>活動代碼（自己設定，方便記憶）</label>
-        <input type="text" id="newEventShortCode" placeholder="例：may2025" maxlength="20">
-      </div>
-      <button class="btn btn-primary" onclick="createNewEvent()">建立活動</button>
-    </div>
-  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script>
-const firebaseConfig={apiKey:"AIzaSyD3quPJCOUoUH_Um5UceWXYuUXfRpJEuyo",authDomain:"opencode-sk.firebaseapp.com",projectId:"opencode-sk",storageBucket:"opencode-sk.firebasestorage.app",messagingSenderId:"741268730945",appId:"1:741268730945:web:503cf0dfab0e9100b042c0"};
-firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
+<script type="module">
+import { db } from "./firebase-config.js";
+import { generateShareCode } from "./lib/sharecode.js";
+import { calculateRemaining } from "./lib/quantity.js";
 
-const params=new URLSearchParams(window.location.search);
-const urlEventId=params.get("id");
+let currentUser = null;
+let currentEventId = null;
+let eventData = null;
+let itemsData = [];
+let ordersData = [];
+let phonesMap = {};   // orderId -> phoneLast3
+let counters = {};    // itemId -> sold
 
-let currentEventId=null;
-let isAdminLoggedIn=false;
-let itemsData=[];
-let ordersData=[];
+document.getElementById("loading").style.display = "none";
 
-document.getElementById("loading").style.display="none";
-
-if(urlEventId){
-  document.getElementById("loginEventId").value=urlEventId;
-  document.getElementById("loginView").style.display="block";
-  loadAllEvents();
-}else{
-  document.getElementById("loginView").style.display="block";
-  loadAllEvents();
+async function init() {
+  try {
+    const cred = await firebase.auth().signInAnonymously();
+    currentUser = cred.user;
+    loadAllEvents();
+    const params = new URLSearchParams(window.location.search);
+    const sc = params.get("code");
+    if (sc) document.getElementById("loginShortCode").value = sc;
+    document.getElementById("loginView").style.display = "block";
+  } catch (e) {
+    document.getElementById("loading").innerHTML = "初始化失敗：" + e.message;
+  }
 }
 
-async function loadAllEvents(){
-  try{
-    const snap=await db.collection("events").orderBy("createdAt","desc").get();
-    const el=document.getElementById("allEventsList");
-    if(snap.empty){el.innerHTML='<div class="empty">尚無活動</div>';return}
-    let html="";
-    snap.forEach(doc=>{
-      const e=doc.data();
-      const t=e.createdAt?e.createdAt.toDate():null;
-      const timeStr=t?t.toLocaleDateString("zh-TW",{month:"short",day:"numeric"}):"";
-      html+=`<div class="item-edit-row">
-        <div class="name">${esc(e.name)}<br><span style="font-size:11px;color:#999">${e.shortCode?'代碼：'+esc(e.shortCode):'無代碼'} · ${timeStr}</span></div>
-        <button class="btn-danger" onclick="deleteEventDirect('${doc.id}','${esc(e.name)}')">刪除</button>
+async function loadAllEvents() {
+  try {
+    const snap = await db.collection("fgq_events").orderBy("createdAt", "desc").get();
+    const el = document.getElementById("allEventsList");
+    if (snap.empty) { el.innerHTML = '<div class="empty">尚無活動</div>'; return; }
+    let html = "";
+    snap.forEach(doc => {
+      const e = doc.data();
+      html += `<div class="item-edit-row">
+        <div class="name">${esc(e.name)}<br><span style="font-size:11px;color:#999">代碼：${esc(e.shortCode || "")}</span></div>
+        <button class="btn btn-outline btn-sm" onclick="fillLogin('${esc(e.shortCode || "")}')">登入</button>
       </div>`;
     });
-    el.innerHTML=html;
-  }catch(e){
-    document.getElementById("allEventsList").innerHTML='<div class="empty">載入失敗</div>';
+    el.innerHTML = html;
+  } catch (e) {
+    document.getElementById("allEventsList").innerHTML = '<div class="empty">載入失敗</div>';
   }
 }
 
-async function deleteEventDirect(id,name){
-  if(!confirm("確定刪除「"+name+"」？此動作無法復原！"))return;
-  try{
-    const doc=await db.collection("events").doc(id).get();
-    if(!doc.exists){showToast("活動不存在");return}
-    const pw=doc.data().adminPassword;
-    const input=prompt("請輸入此活動的管理密碼以確認刪除：");
-    if(input===null)return;
-    if(input!==pw){showToast("密碼錯誤，無法刪除");return}
-    const itemsSnap=await db.collection("events").doc(id).collection("items").get();
-    const ordersSnap=await db.collection("events").doc(id).collection("orders").get();
-    const batch=db.batch();
-    itemsSnap.forEach(d=>batch.delete(d.ref));
-    ordersSnap.forEach(d=>batch.delete(d.ref));
-    batch.delete(db.collection("events").doc(id));
-    await batch.commit();
-    showToast("已刪除「"+name+"」");
-    loadAllEvents();
-  }catch(e){
-    showToast("刪除失敗："+e.message);
-  }
-}
+window.fillLogin = function(code) {
+  document.getElementById("loginShortCode").value = code;
+  document.getElementById("loginPassword").focus();
+};
 
-async function doLogin(){
-  const raw=document.getElementById("loginEventId").value.trim();
-  const eid=raw.toUpperCase();
-  const pw=document.getElementById("loginPassword").value.trim();
-  if(!raw){showToast("請輸入活動代碼");return}
-  if(!pw){showToast("請輸入密碼");return}
-  try{
-    let docSnap=null;
-    let foundId=eid;
-    const snap=await db.collection("events").where("shortCode","==",eid).limit(1).get();
-    if(!snap.empty){
-      docSnap=snap.docs[0];
-      foundId=docSnap.id;
-    }else{
-      docSnap=await db.collection("events").doc(raw).get();
-      if(docSnap.exists){
-        foundId=raw;
-      }else{
-        docSnap=await db.collection("events").doc(eid).get();
-        foundId=eid;
-      }
-    }
-    if(!docSnap||!docSnap.exists){showToast("找不到此活動");return}
-    if(docSnap.data().adminPassword!==pw){showToast("密碼錯誤");return}
-    currentEventId=foundId;
-    isAdminLoggedIn=true;
-    document.getElementById("loginView").style.display="none";
-    document.getElementById("adminView").style.display="block";
-    window.history.replaceState(null,"","admin.html?id="+foundId);
-    loadAdminData();
-  }catch(e){
-    showToast("登入失敗："+e.message);
-  }
-}
-
-function doLogout(){
-  isAdminLoggedIn=false;
-  currentEventId=null;
-  document.getElementById("adminView").style.display="none";
-  document.getElementById("loginView").style.display="block";
-  window.history.replaceState(null,"","admin.html");
-}
-
-function showCreateEvent(){
-  document.getElementById("loginView").style.display="none";
-  document.getElementById("createView").style.display="block";
-}
-
-function backToLogin(){
-  document.getElementById("createView").style.display="none";
-  document.getElementById("loginView").style.display="block";
-}
-
-async function createNewEvent(){
-  const name=document.getElementById("newEventName").value.trim();
-  const pw=document.getElementById("newEventPassword").value.trim();
-  const sc=document.getElementById("newEventShortCode").value.trim().toUpperCase();
-  if(!name){showToast("請輸入活動名稱");return}
-  if(!pw){showToast("請輸入管理密碼");return}
-  if(!sc){showToast("請輸入活動代碼");return}
-  try{
-    const dup=await db.collection("events").where("shortCode","==",sc).limit(1).get();
-    if(!dup.empty){showToast("此代碼已被使用，請換一個");return}
-    const ref=await db.collection("events").add({
-      name:name,
-      adminPassword:pw,
-      shortCode:sc,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+window.doLogin = async function() {
+  const sc = document.getElementById("loginShortCode").value.trim().toUpperCase();
+  const pw = document.getElementById("loginPassword").value;
+  if (!sc) { showToast("請輸入活動代碼"); return; }
+  if (!pw) { showToast("請輸入管理密碼"); return; }
+  try {
+    const snap = await db.collection("fgq_events").where("shortCode", "==", sc).limit(1).get();
+    if (snap.empty) { showToast("找不到此活動代碼"); return; }
+    const eventId = snap.docs[0].id;
+    // 先刪除舊 session（規則不允許 update）
+    await db.collection("fgq_sessions").doc(currentUser.uid).delete().catch(() => {});
+    // 寫入 session：規則會驗證密碼與 fgq_admin 是否相符
+    await db.collection("fgq_sessions").doc(currentUser.uid).set({
+      eventId,
+      adminPassword: pw,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    showToast("活動已建立！");
-    currentEventId=ref.id;
-    isAdminLoggedIn=true;
-    document.getElementById("createView").style.display="none";
-    document.getElementById("adminView").style.display="block";
-    window.history.replaceState(null,"","admin.html?id="+ref.id);
-    loadAdminData();
-  }catch(e){
-    showToast("建立失敗："+e.message);
+    currentEventId = eventId;
+    window.history.replaceState(null, "", "admin.html");
+    enterAdmin();
+  } catch (e) {
+    showToast("密碼錯誤或登入失敗");
   }
-}
+};
 
-async function copyShareLink(){
-  try{
-    const doc=await db.collection("events").doc(currentEventId).get();
-    const sc=doc.exists?doc.data().shortCode:null;
-    const shareId=sc||currentEventId;
-    const basePath=window.location.pathname.replace(/admin\.html.*$/,"");
-    const url=window.location.origin+basePath+"index.html?id="+shareId;
-    if(navigator.clipboard&&window.isSecureContext){
-      await navigator.clipboard.writeText(url);
-      showToast("已複製分享連結！");
-    }else{
-      showShareUrl(url);
-    }
-  }catch(e){
-    const basePath=window.location.pathname.replace(/admin\.html.*$/,"");
-    showShareUrl(window.location.origin+basePath+"index.html?id="+currentEventId);
+window.doLogout = async function() {
+  try { await db.collection("fgq_sessions").doc(currentUser.uid).delete().catch(() => {}); } catch (e) {}
+  currentEventId = null;
+  document.getElementById("adminView").style.display = "none";
+  document.getElementById("loginView").style.display = "block";
+  loadAllEvents();
+};
+
+window.showCreateEvent = function() {
+  document.getElementById("loginView").style.display = "none";
+  document.getElementById("createView").style.display = "block";
+};
+
+window.backToLogin = function() {
+  document.getElementById("createView").style.display = "none";
+  document.getElementById("loginView").style.display = "block";
+};
+
+window.createNewEvent = async function() {
+  const name = document.getElementById("newEventName").value.trim();
+  const sc = document.getElementById("newEventShortCode").value.trim().toUpperCase();
+  const pw = document.getElementById("newEventPassword").value.trim();
+  const totalLimit = parseInt(document.getElementById("newEventTotalLimit").value) || 0;
+  if (!name) { showToast("請輸入活動名稱"); return; }
+  if (!pw) { showToast("請輸入管理密碼"); return; }
+  if (!sc || sc.length < 3) { showToast("活動代碼需至少 3 碼"); return; }
+  let shareCode;
+  try { shareCode = generateShareCode(sc); }
+  catch (e) { showToast(e.message); return; }
+
+  try {
+    const dup = await db.collection("fgq_events").where("shortCode", "==", sc).limit(1).get();
+    if (!dup.empty) { showToast("此活動代碼已被使用，請換一個"); return; }
+
+    const eventRef = db.collection("fgq_events").doc();
+    // 1. 寫入活動 + 管理憑證（皆為 create，規則允許）
+    const batch = db.batch();
+    batch.set(eventRef, {
+      name,
+      shortCode: sc,
+      shareCode,
+      totalLimit,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    batch.set(db.collection("fgq_admin").doc(eventRef.id), {
+      adminPassword: pw
+    });
+    await batch.commit();
+
+    // 2. 寫入 session（規則需能 get 到 fgq_admin，故不可在同批 transaction）
+    await db.collection("fgq_sessions").doc(currentUser.uid).set({
+      eventId: eventRef.id,
+      adminPassword: pw,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    currentEventId = eventRef.id;
+    document.getElementById("createView").style.display = "none";
+    showCredentialCard({ name, shortCode: sc, password: pw, shareCode });
+  } catch (e) {
+    showToast("建立失敗：" + e.message);
   }
-}
-function showShareUrl(url){
-  const overlay=document.createElement("div");
-  overlay.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center";
-  overlay.onclick=function(e){if(e.target===overlay)overlay.remove()};
-  const box=document.createElement("div");
-  box.style.cssText="background:#fff;border-radius:12px;padding:20px;margin:16px;max-width:400px;width:100%;text-align:center";
-  box.innerHTML='<div style="font-size:15px;font-weight:600;margin-bottom:12px;color:#333">分享連結</div>'
-    +'<input type="text" value="'+url+'" readonly style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:13px;margin-bottom:12px;text-align:center" onclick="this.select()">'
-    +'<button style="padding:10px 24px;background:#e74c3c;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer" onclick="navigator.clipboard.writeText(\''+url+'\').then(()=>{this.textContent=\'已複製！\';setTimeout(()=>this.closest(\'div[style*=fixed]\').remove(),800)}).catch(()=>{this.select();document.execCommand(\'copy\');this.textContent=\'已複製！\'})">複製連結</button>';
-  overlay.appendChild(box);
+};
+
+// 憑證卡
+window.showCredentialCard = function(creds) {
+  let name = creds ? creds.name : (eventData ? eventData.name : "");
+  let shortCode = creds ? creds.shortCode : (eventData ? eventData.shortCode : "");
+  let password = creds ? creds.password : (currentAdminPw || "");
+  let shareCode = creds ? creds.shareCode : (eventData ? eventData.shareCode : "");
+  const shareUrl = location.origin + location.pathname.replace(/admin\.html.*$/, "") + "index.html?id=" + shareCode;
+  const adminUrl = location.origin + location.pathname.replace(/index\.html.*$/, "") + "admin.html";
+
+  const text = `【快閃糾團 ${name}】
+活動代碼：${shortCode}
+管理密碼：${password}
+點餐連結：${shareUrl}
+後台網址：${adminUrl}`;
+
+  const overlay = document.createElement("div");
+  overlay.className = "credential-overlay";
+  overlay.id = "credentialOverlay";
+  overlay.innerHTML = `
+    <div class="credential-card">
+      <h3>揪團已建立！</h3>
+      <div class="sub">請截圖保存此頁，代碼與密碼遺失後無法取回</div>
+      <div class="cred-row"><span class="k">活動名稱</span><span class="v">${esc(name)}</span></div>
+      <div class="cred-row"><span class="k">活動代碼</span><span class="v">${esc(shortCode)}</span></div>
+      <div class="cred-row"><span class="k">管理密碼</span><span class="v">${esc(password)}</span></div>
+      <div class="cred-row"><span class="k">點餐連結</span><span class="v">${esc(shareUrl)}</span></div>
+      <div class="cred-row"><span class="k">後台網址</span><span class="v">${esc(adminUrl)}</span></div>
+      <div class="cred-note"><b>⚠️ 重要</b>此為你唯一取得代碼與密碼的地方，請立即截圖或抄寫保存，遺失後無法取回。</div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn btn-success" onclick="copyCredText(this)">複製憑證文字</button>
+        <button class="btn btn-primary" onclick="closeCredentialCard()">進入後台</button>
+      </div>
+    </div>
+  `;
   document.body.appendChild(overlay);
+  window._credText = text;
+};
+
+window.copyCredText = async function(btn) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(window._credText);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = window._credText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    btn.textContent = "已複製！";
+  } catch (e) {
+    showToast("複製失敗，請手動抄寫");
+  }
+};
+
+window.closeCredentialCard = function() {
+  const ov = document.getElementById("credentialOverlay");
+  if (ov) ov.remove();
+  enterAdmin();
+};
+
+function enterAdmin() {
+  document.getElementById("loginView").style.display = "none";
+  document.getElementById("createView").style.display = "none";
+  document.getElementById("adminView").style.display = "block";
+  loadAdminData();
 }
 
-async function loadAdminData(){
-  const doc=await db.collection("events").doc(currentEventId).get();
-  if(doc.exists){
-    const d=doc.data();
-    const sc=d.shortCode;
-    if(sc) document.getElementById("shortCodeDisplay").textContent="活動代碼："+sc;
-    document.getElementById("editEventName").value=d.name||"";
-    document.getElementById("editEventShortCode").value=sc||"";
-    document.getElementById("editEventPassword").value=d.adminPassword||"";
-    if(d.deadline){
-      const dt=new Date(d.deadline.seconds*1000);
-      const local=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
-      document.getElementById("editEventDeadline").value=local;
-    }
+async function loadAdminData() {
+  const doc = await db.collection("fgq_events").doc(currentEventId).get();
+  if (!doc.exists) { showToast("活動不存在"); doLogout(); return; }
+  eventData = doc.data();
+  document.getElementById("adminEventName").textContent = eventData.name;
+  document.getElementById("adminShortCode").textContent = "活動代碼：" + eventData.shortCode;
+  document.getElementById("editEventName").value = eventData.name || "";
+  document.getElementById("editEventShortCode").value = eventData.shortCode || "";
+  document.getElementById("editEventTotalLimit").value = eventData.totalLimit || 0;
+  if (eventData.deadline) {
+    const dt = new Date(eventData.deadline.seconds * 1000);
+    const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    document.getElementById("editEventDeadline").value = local;
   }
+  // 讀取管理密碼（管理員才可讀）
+  try {
+    const pwSnap = await db.collection("fgq_admin").doc(currentEventId).get();
+    currentAdminPw = pwSnap.exists ? pwSnap.data().adminPassword : "";
+    document.getElementById("editEventPassword").value = currentAdminPw;
+  } catch (e) { /* 非管理員時忽略 */ }
   await loadItemsAdmin();
   listenOrdersAdmin();
 }
 
-async function saveEventSettings(){
-  const name=document.getElementById("editEventName").value.trim();
-  const sc=document.getElementById("editEventShortCode").value.trim().toUpperCase();
-  const pw=document.getElementById("editEventPassword").value.trim();
-  const dl=document.getElementById("editEventDeadline").value;
-  if(!name){showToast("請輸入活動名稱");return}
-  if(!pw){showToast("請輸入管理密碼");return}
-  if(!sc){showToast("請輸入活動代碼");return}
-  try{
-    const dup=await db.collection("events").where("shortCode","==",sc).limit(1).get();
-    if(!dup.empty&&dup.docs[0].id!==currentEventId){showToast("此代碼已被其他活動使用");return}
-    const update={name:name,shortCode:sc,adminPassword:pw};
-    if(dl){
-      update.deadline=firebase.firestore.Timestamp.fromDate(new Date(dl));
-    }else{
-      update.deadline=firebase.firestore.FieldValue.delete();
-    }
-    await db.collection("events").doc(currentEventId).update(update);
-    showToast("設定已儲存！");
-  }catch(e){
-    showToast("儲存失敗："+e.message);
-  }
-}
+let currentAdminPw = "";
 
-async function deleteEvent(){
-  if(!confirm("確定要刪除此活動？所有品項和訂單都會一起刪除，無法復原！"))return;
-  if(!confirm("真的要刪除嗎？"))return;
-  try{
-    const itemsSnap=await db.collection("events").doc(currentEventId).collection("items").get();
-    const ordersSnap=await db.collection("events").doc(currentEventId).collection("orders").get();
-    const batch=db.batch();
-    itemsSnap.forEach(doc=>batch.delete(doc.ref));
-    ordersSnap.forEach(doc=>batch.delete(doc.ref));
-    batch.delete(db.collection("events").doc(currentEventId));
+window.saveEventSettings = async function() {
+  const name = document.getElementById("editEventName").value.trim();
+  const sc = document.getElementById("editEventShortCode").value.trim().toUpperCase();
+  const pw = document.getElementById("editEventPassword").value.trim();
+  const dl = document.getElementById("editEventDeadline").value;
+  const totalLimit = parseInt(document.getElementById("editEventTotalLimit").value) || 0;
+  if (!name) { showToast("請輸入活動名稱"); return; }
+  if (!sc || sc.length < 3) { showToast("活動代碼需至少 3 碼"); return; }
+  if (!pw) { showToast("請輸入管理密碼"); return; }
+  try {
+    const dup = await db.collection("fgq_events").where("shortCode", "==", sc).limit(1).get();
+    if (!dup.empty && dup.docs[0].id !== currentEventId) { showToast("此代碼已被其他活動使用"); return; }
+    const update = { name, shortCode: sc, totalLimit };
+    if (dl) update.deadline = firebase.firestore.Timestamp.fromDate(new Date(dl));
+    else update.deadline = firebase.firestore.FieldValue.delete();
+    await db.collection("fgq_events").doc(currentEventId).update(update);
+    await db.collection("fgq_admin").doc(currentEventId).update({ adminPassword: pw });
+    currentAdminPw = pw;
+    eventData = { ...eventData, ...update, adminPassword: undefined };
+    document.getElementById("adminEventName").textContent = name;
+    document.getElementById("adminShortCode").textContent = "活動代碼：" + sc;
+    showToast("設定已儲存！");
+  } catch (e) {
+    showToast("儲存失敗：" + e.message);
+  }
+};
+
+window.deleteEvent = async function() {
+  if (!confirm("確定要刪除此活動？所有品項和訂單都會一起刪除，無法復原！")) return;
+  if (!confirm("真的要刪除嗎？")) return;
+  try {
+    const itemsSnap = await db.collection("fgq_events").doc(currentEventId).collection("items").get();
+    const ordersSnap = await db.collection("fgq_events").doc(currentEventId).collection("orders").get();
+    const countersSnap = await db.collection("fgq_events").doc(currentEventId).collection("counters").get();
+    const phonesSnap = await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").get();
+    const batch = db.batch();
+    itemsSnap.forEach(d => batch.delete(d.ref));
+    ordersSnap.forEach(d => batch.delete(d.ref));
+    countersSnap.forEach(d => batch.delete(d.ref));
+    phonesSnap.forEach(d => batch.delete(d.ref));
+    batch.delete(db.collection("fgq_events").doc(currentEventId));
+    batch.delete(db.collection("fgq_admin").doc(currentEventId));
+    batch.delete(db.collection("fgq_sessions").doc(currentUser.uid));
     await batch.commit();
     showToast("活動已刪除");
     doLogout();
-  }catch(e){
-    showToast("刪除失敗："+e.message);
+  } catch (e) {
+    showToast("刪除失敗：" + e.message);
   }
-}
+};
 
-async function loadItemsAdmin(){
-  const snap=await db.collection("events").doc(currentEventId).collection("items").orderBy("createdAt").get();
-  itemsData=[];
-  snap.forEach(doc=>itemsData.push({id:doc.id,...doc.data()}));
+async function loadItemsAdmin() {
+  const snap = await db.collection("fgq_events").doc(currentEventId).collection("items").orderBy("createdAt").get();
+  itemsData = [];
+  snap.forEach(d => itemsData.push({ id: d.id, ...d.data() }));
+  // 讀取計數器
+  counters = {};
+  const cSnap = await db.collection("fgq_events").doc(currentEventId).collection("counters").get();
+  cSnap.forEach(d => { counters[d.id] = d.data().sold || 0; });
   renderItemsEdit();
 }
 
-function renderItemsEdit(){
-  const el=document.getElementById("itemsEditList");
-  if(itemsData.length===0){el.innerHTML='<div class="empty">尚無品項</div>';return}
-  el.innerHTML=itemsData.map(item=>`
-    <div class="item-edit-row">
-      <div class="name">${esc(item.name)}</div>
-      <div class="price">$${item.price}</div>
-      <button class="btn-danger" onclick="deleteItem('${item.id}')">刪除</button>
-    </div>
-  `).join("");
+function renderItemsEdit() {
+  const el = document.getElementById("itemsEditList");
+  if (itemsData.length === 0) { el.innerHTML = '<div class="empty">尚無品項</div>'; return; }
+  el.innerHTML = itemsData.map(item => {
+    const sold = counters[item.id] || 0;
+    const remain = calculateRemaining(item.limit || 0, sold);
+    const remainTxt = !item.limit ? "不限量" : (remain <= 0 ? "已售完" : "剩 " + remain);
+    return `
+      <div class="item-edit-row">
+        <div class="name">${esc(item.name)}</div>
+        <div class="price">$${item.price}</div>
+        <div class="remain">${remainTxt}</div>
+        <button class="btn-danger" onclick="deleteItem('${item.id}')">刪除</button>
+      </div>`;
+  }).join("");
 }
 
-async function addItem(){
-  const name=document.getElementById("newItemName").value.trim();
-  const price=parseInt(document.getElementById("newItemPrice").value);
-  if(!name){showToast("請輸入品項名稱");return}
-  if(isNaN(price)||price<0){showToast("請輸入正確價格");return}
-  try{
-    await db.collection("events").doc(currentEventId).collection("items").add({
-      name:name,price:price,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+window.addItem = async function() {
+  const name = document.getElementById("newItemName").value.trim();
+  const price = parseInt(document.getElementById("newItemPrice").value);
+  const limit = parseInt(document.getElementById("newItemLimit").value);
+  if (!name) { showToast("請輸入品項名稱"); return; }
+  if (isNaN(price) || price < 0) { showToast("請輸入正確價格"); return; }
+  try {
+    await db.collection("fgq_events").doc(currentEventId).collection("items").add({
+      name,
+      price,
+      limit: (isNaN(limit) || limit < 0) ? 0 : limit,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    document.getElementById("newItemName").value="";
-    document.getElementById("newItemPrice").value="";
+    document.getElementById("newItemName").value = "";
+    document.getElementById("newItemPrice").value = "";
+    document.getElementById("newItemLimit").value = "0";
     showToast("品項已新增");
     await loadItemsAdmin();
-  }catch(e){
-    showToast("新增失敗："+e.message);
+  } catch (e) {
+    showToast("新增失敗：" + e.message);
   }
-}
+};
 
-async function deleteItem(id){
-  if(!confirm("確定刪除此品項？"))return;
-  try{
-    await db.collection("events").doc(currentEventId).collection("items").doc(id).delete();
+window.deleteItem = async function(id) {
+  if (!confirm("確定刪除此品項？已有訂單不受影響。")) return;
+  try {
+    await db.collection("fgq_events").doc(currentEventId).collection("items").doc(id).delete();
     showToast("品項已刪除");
     await loadItemsAdmin();
-  }catch(e){
-    showToast("刪除失敗："+e.message);
+  } catch (e) {
+    showToast("刪除失敗：" + e.message);
   }
-}
+};
 
-function listenOrdersAdmin(){
-  db.collection("events").doc(currentEventId).collection("orders").orderBy("createdAt","desc")
-    .onSnapshot(snap=>{
-      ordersData=[];
-      let total=0;
-      snap.forEach(doc=>{
-        const o={id:doc.id,...doc.data()};
-        ordersData.push(o);
-        total+=o.totalPrice;
-      });
-      document.getElementById("grandTotal").textContent="$"+total;
+function listenOrdersAdmin() {
+  db.collection("fgq_events").doc(currentEventId).collection("orders").orderBy("createdAt", "desc")
+    .onSnapshot(async snap => {
+      ordersData = [];
+      snap.forEach(d => ordersData.push({ id: d.id, ...d.data() }));
+      // 讀取後三碼
+      try {
+        phonesMap = {};
+        const pSnap = await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").get();
+        pSnap.forEach(d => { phonesMap[d.id] = d.data().phoneLast3 || ""; });
+      } catch (e) { phonesMap = {}; }
+      let total = 0;
+      ordersData.forEach(o => { total += (o.totalPrice || 0); });
+      document.getElementById("grandTotal").textContent = "$" + total;
       renderOrdersAdmin();
-    });
+    }, err => console.error(err));
 }
 
-function renderOrdersAdmin(){
-  const el=document.getElementById("ordersAdminList");
-  if(ordersData.length===0){el.innerHTML='<div class="empty">尚無訂單</div>';return}
-  el.innerHTML=ordersData.map(o=>{
-    const detail=o.items.map(i=>i.name+" x"+i.qty+" ($"+i.price*i.qty+")").join("、");
-    const badge=o.isPaid?'<span class="paid-badge">已收款</span>':'<span class="unpaid-badge">未收款</span>';
-    const btn=o.isPaid
-      ?`<button class="btn btn-outline btn-sm" onclick="togglePaid('${o.id}',false)">取消收款</button>`
-      :`<button class="btn btn-success btn-sm" onclick="togglePaid('${o.id}',true)">已收款</button>`;
-    return`<div class="order-row">
+function renderOrdersAdmin() {
+  const el = document.getElementById("ordersAdminList");
+  if (ordersData.length === 0) { el.innerHTML = '<div class="empty">尚無訂單</div>'; return; }
+  el.innerHTML = ordersData.map(o => {
+    const detail = o.items.map(i => i.name + " x" + i.qty + " ($" + i.price * i.qty + ")").join("、");
+    const badge = o.isPaid ? '<span class="paid-badge">已收款</span>' : '<span class="unpaid-badge">未收款</span>';
+    const phone = phonesMap[o.id] || "—";
+    const time = o.createdAt ? o.createdAt.toDate().toLocaleString("zh-TW", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+    const btn = o.isPaid
+      ? `<button class="btn btn-outline btn-sm" onclick="togglePaid('${o.id}',false)">取消收款</button>`
+      : `<button class="btn btn-success btn-sm" onclick="togglePaid('${o.id}',true)">已收款</button>`;
+    return `<div class="order-row">
       <div class="order-header">
         <span class="order-name">${esc(o.buyerName)} ${badge}</span>
+        <span style="font-size:11px;color:#999">後三碼 ${esc(phone)}</span>
       </div>
       <div class="order-items">${esc(detail)}</div>
-      <div class="order-total">合計 $${o.totalPrice}</div>
+      <div class="order-total">合計 $${o.totalPrice}${time ? " <span style='color:#999;font-weight:400;font-size:11px'>· " + time + "</span>" : ""}</div>
       <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
         ${btn}
         <button class="btn-danger" onclick="deleteOrder('${o.id}')">刪除</button>
@@ -532,48 +627,92 @@ function renderOrdersAdmin(){
   }).join("");
 }
 
-async function togglePaid(orderId,paid){
-  try{
-    await db.collection("events").doc(currentEventId).collection("orders").doc(orderId).update({isPaid:paid});
-    showToast(paid?"已標記為已收款":"已取消收款");
-  }catch(e){
-    showToast("操作失敗："+e.message);
+window.togglePaid = async function(orderId, paid) {
+  try {
+    await db.collection("fgq_events").doc(currentEventId).collection("orders").doc(orderId).update({ isPaid: paid });
+    showToast(paid ? "已標記為已收款" : "已取消收款");
+  } catch (e) {
+    showToast("操作失敗：" + e.message);
   }
-}
+};
 
-async function deleteOrder(orderId){
-  if(!confirm("確定刪除此訂單？"))return;
-  try{
-    await db.collection("events").doc(currentEventId).collection("orders").doc(orderId).delete();
+window.deleteOrder = async function(orderId) {
+  const order = ordersData.find(o => o.id === orderId);
+  if (!order) return;
+  if (!confirm("確定刪除此訂單？名額將被釋放。")) return;
+  try {
+    await db.runTransaction(async tx => {
+      const counterSnap = {};
+      for (const key of ["__total", ...order.items.map(i => i.itemId)]) {
+        const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
+        const snap = await tx.get(ref);
+        counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
+      }
+      for (const item of order.items) {
+        if (counterSnap[item.itemId] !== undefined) {
+          tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(item.itemId),
+            { sold: Math.max(0, counterSnap[item.itemId] - item.qty) });
+        }
+        if (counterSnap.__total !== undefined) {
+          tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc("__total"),
+            { sold: Math.max(0, counterSnap.__total - item.qty) });
+        }
+      }
+      tx.delete(db.collection("fgq_events").doc(currentEventId).collection("orders").doc(orderId));
+      tx.delete(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderId));
+      return true;
+    });
     showToast("訂單已刪除");
-  }catch(e){
-    showToast("刪除失敗："+e.message);
+  } catch (e) {
+    showToast("刪除失敗：" + e.message);
   }
-}
+};
 
-function switchTab(tab){
-  document.querySelectorAll(".tab").forEach((t,i)=>{
-    t.classList.toggle("active",(tab==="settings"&&i===0)||(tab==="items"&&i===1)||(tab==="orders"&&i===2));
+window.copyShareLink = async function() {
+  try {
+    if (!eventData || !eventData.shareCode) {
+      const doc = await db.collection("fgq_events").doc(currentEventId).get();
+      eventData = doc.data();
+    }
+    const url = location.origin + location.pathname.replace(/admin\.html.*$/, "") + "index.html?id=" + eventData.shareCode;
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(url);
+      showToast("已複製分享連結！");
+    } else {
+      prompt("分享連結：", url);
+    }
+  } catch (e) {
+    showToast("複製失敗：" + e.message);
+  }
+};
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach((t, i) => {
+    t.classList.toggle("active", (tab === "settings" && i === 0) || (tab === "items" && i === 1) || (tab === "orders" && i === 2));
   });
-  document.getElementById("tabSettings").style.display=tab==="settings"?"block":"none";
-  document.getElementById("tabItems").style.display=tab==="items"?"block":"none";
-  document.getElementById("tabOrders").style.display=tab==="orders"?"block":"none";
+  document.getElementById("tabSettings").style.display = tab === "settings" ? "block" : "none";
+  document.getElementById("tabItems").style.display = tab === "items" ? "block" : "none";
+  document.getElementById("tabOrders").style.display = tab === "orders" ? "block" : "none";
 }
 
-function showToast(msg){
-  const t=document.getElementById("toast");
-  t.textContent=msg;t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),2000);
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
 }
-function togglePw(inputId,btn){
-  const inp=document.getElementById(inputId);
-  const show=inp.type==="password";
-  inp.type=show?"text":"password";
-  btn.innerHTML=show
-    ?'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
-    :'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+
+function togglePw(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  const show = inp.type === "password";
+  inp.type = show ? "text" : "password";
+  btn.innerHTML = show
+    ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+    : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
 }
-function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML }
+
+init();
 </script>
 </body>
 </html>
