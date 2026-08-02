@@ -37,12 +37,18 @@ fgq_events/{eventId}
 
 fgq_events/{eventId}/orders/{orderId}
   ├── buyerName: string       姓名（顯示於訂單）
-  ├── items: array            品項明細 [{name, price, qty}]
+  ├── items: array            品項明細 [{itemId, name, price, qty}]
   ├── totalPrice: number      總金額
   ├── createdBy: string       下單者 uid
   ├── createdAt: timestamp    下單時間（數量排序依據）
   ├── editCount: number       已用刪改次數（0 起算，上限 3）
   └── isPaid: boolean         收款狀態
+
+fgq_events/{eventId}/counters/{itemId}   已售數量計數器（品項層）
+  └── sold: number                       該品項累計已售數量
+
+fgq_events/{eventId}/counters/__total   已售數量計數器（活動層）
+  └── sold: number                       活動全部訂單的品項總量
 
 fgq_phones/{orderId}          手機後三碼（獨立集合，僅管理者可讀）
   ├── eventId: string
@@ -50,13 +56,16 @@ fgq_phones/{orderId}          手機後三碼（獨立集合，僅管理者可�
   └── createdAt: timestamp
 ```
 
+> 說明：order 的 `items[].itemId` 讓規則能 `get()` 品項文件驗證品名/價格真實性，並用 counter 文件防超賣。
+
 ### 數量計數
 
 數量採「依下單時間排序、先下單先得」，用 Firestore transaction 防超賣。
 
-- 活動剩餘 = `totalLimit` − 該活動所有訂單的品項總量
-- 品項剩餘 = `limit` − 該品項在全部訂單中的累計數量
-- 改單時：舊數量釋放、新數量重算（即時釋放名額）
+- 每個品項的已售數量存於 `counters/{itemId}.sold`，活動總量存於 `counters/__total.sold`
+- **下單（transaction）**：讀計數器 → 檢查各品項 `sold + qty ≤ limit` 且活動 `__total.sold + Σqty ≤ totalLimit` → 同時寫入訂單、品項計數器、活動計數器
+- **改單（transaction）**：先扣除舊訂單的品項數量（釋放名額），再檢查並加上新數量
+- **刪單（transaction）**：扣除該訂單的品項數量（釋放名額）
 - 剩餘數量不足 → 不能下單（前端禁用 + 後端規則把關）
 
 ## 權限規則（Firestore Security Rules）
