@@ -662,7 +662,7 @@ window.deleteOrder = async function(orderId) {
   try {
     await db.runTransaction(async tx => {
       const counterSnap = {};
-      for (const key of ["__total", ...order.items.map(i => i.itemId)]) {
+      for (const key of ["__total", "__orders", ...order.items.map(i => i.itemId)]) {
         const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
         const snap = await tx.get(ref);
         counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
@@ -676,6 +676,10 @@ window.deleteOrder = async function(orderId) {
           tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc("__total"),
             { sold: Math.max(0, counterSnap.__total - item.qty) });
         }
+      }
+      if (counterSnap.__orders !== undefined) {
+        tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc("__orders"),
+          { sold: Math.max(0, counterSnap.__orders - 1) });
       }
       tx.delete(db.collection("fgq_events").doc(currentEventId).collection("orders").doc(orderId));
       tx.delete(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderId));

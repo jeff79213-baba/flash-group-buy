@@ -86,17 +86,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script type="module">
 import { db } from "./firebase-config.js";
-import { calculateRemaining, validateOrderQty, applyOrderCounters, releaseOrderCounters } from "./lib/quantity.js";
-import { canEdit, canDelete, remainingEdits } from "./lib/editlimit.js";
+import { calculateRemaining, validateOrderQty, applyOrderCounters } from "./lib/quantity.js";
 
 let currentUser = null;
 let currentEventId = null;
 let eventData = null;
 let items = [];
-let counters = {};        // { itemId: sold, __total: sold }
+let counters = {};        // { itemId: sold, __total: sold, __orders: 下單人數 }
 let selected = {};        // { itemId: qty }
 let myOrders = [];        // 本人訂單
-let allOrders = [];       // 全部訂單
 
 const app = document.getElementById("app");
 
@@ -157,6 +155,7 @@ async function loadCounters() {
   const snap = await db.collection("fgq_events").doc(currentEventId).collection("counters").get();
   snap.forEach(d => { counters[d.id] = d.data().sold || 0; });
   if (counters.__total === undefined) counters.__total = 0;
+  if (counters.__orders === undefined) counters.__orders = 0;
   items.forEach(it => { if (counters[it.id] === undefined) counters[it.id] = 0; });
 }
 
@@ -226,18 +225,32 @@ function render() {
     </div>
 
     <div class="card orders-section">
-      <h2>目前訂單</h2>
-      <div id="allOrdersList">${renderAllOrders()}</div>
+      <h2>下單統計</h2>
+      <div id="statsList">${renderStats()}</div>
     </div>
   `;
+}
+
+function renderStats() {
+  const people = counters.__orders || 0;
+  const totalQty = counters.__total || 0;
+  return `
+    <div style="display:flex;gap:12px;text-align:center">
+      <div style="flex:1;padding:12px;background:#fff1f0;border-radius:10px">
+        <div style="font-size:26px;font-weight:700;color:#e74c3c">${people}</div>
+        <div style="font-size:12px;color:#666;margin-top:2px">人下單</div>
+      </div>
+      <div style="flex:1;padding:12px;background:#fff1f0;border-radius:10px">
+        <div style="font-size:26px;font-weight:700;color:#e74c3c">${totalQty}</div>
+        <div style="font-size:12px;color:#666;margin-top:2px">份商品</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#999;margin-top:8px">此數據僅供參考，實際以主辦單位帳目為準。</div>`;
 }
 
 function renderMyOrders() {
   if (myOrders.length === 0) return '<div class="empty">你還沒有訂單</div>';
   return myOrders.map(o => {
-    const remain = remainingEdits(o.editCount || 0);
-    const canEditFlag = canEdit(o.editCount);
-    const canDeleteFlag = canDelete(o.editCount);
     const detail = o.items.map(i => i.name + " x" + i.qty + " ($" + i.price * i.qty + ")").join("、");
     return `
       <div class="order-item">
@@ -246,51 +259,25 @@ function renderMyOrders() {
         </div>
         <div class="order-detail">${esc(detail)}</div>
         <div class="order-total">合計 $${o.totalPrice}</div>
-        <div class="order-actions">
-          <span class="edit-remain">還可改/刪 ${remain} 次</span>
-          <button class="btn-sm btn-edit" ${canEditFlag ? '' : 'disabled'} onclick="window._editOrder('${o.id}')">修改</button>
-          <button class="btn-sm btn-del" ${canDeleteFlag ? '' : 'disabled'} onclick="window._deleteOrder('${o.id}')">刪除</button>
-        </div>
-        ${canEditFlag ? '' : '<div style="font-size:11px;color:#e74c3c;margin-top:4px">此訂單已達修改上限，需聯絡管理者協助</div>'}
+        <div style="font-size:11px;color:#999;margin-top:6px">訂單送出後不可修改，如需調整請聯絡主辦</div>
       </div>`;
   }).join("");
-}
-
-function renderAllOrders() {
-  if (allOrders.length === 0) return '<div class="empty">目前還沒有訂單</div>';
-  let grandTotal = 0;
-  const html = allOrders.map(o => {
-    grandTotal += o.totalPrice;
-    const detail = o.items.map(i => i.name + " x" + i.qty + " ($" + i.price * i.qty + ")").join("、");
-    return `
-      <div class="order-item">
-        <div class="order-name">${esc(o.buyerName)}${o.isPaid ? '<span class="order-paid">已收款</span>' : ''}</div>
-        <div class="order-detail">${esc(detail)}</div>
-        <div class="order-total">合計 $${o.totalPrice}</div>
-      </div>`;
-  }).join("");
-  return html + `<table style="width:100%;margin-top:8px;font-size:13px"><tr><td>總計</td><td style="text-align:right;font-weight:700;color:#e74c3c">$${grandTotal}</td></tr></table>`;
 }
 
 async function listenOrders() {
-  // 本人訂單
   db.collection("fgq_events").doc(currentEventId).collection("orders")
-    .where("createdBy", "==", currentUser.uid)
-    .onSnapshot(snap => {
-      myOrders = [];
-      snap.forEach(d => myOrders.push({ id: d.id, ...d.data() }));
+    .doc(currentUser.uid)
+    .onSnapshot(docSnap => {
+      myOrders = docSnap.exists ? [{ id: docSnap.id, ...docSnap.data() }] : [];
       const el = document.getElementById("myOrdersList");
       if (el) el.innerHTML = renderMyOrders();
     }, err => console.error(err));
 
-  // 全部訂單
-  db.collection("fgq_events").doc(currentEventId).collection("orders")
-    .orderBy("createdAt", "desc")
-    .onSnapshot(snap => {
-      allOrders = [];
-      snap.forEach(d => allOrders.push({ id: d.id, ...d.data() }));
-      const el = document.getElementById("allOrdersList");
-      if (el) el.innerHTML = renderAllOrders();
+  // 統計（多少人下單、多少數量）即時更新
+  db.collection("fgq_events").doc(currentEventId).collection("counters")
+    .onSnapshot(() => {
+      const el = document.getElementById("statsList");
+      if (el) el.innerHTML = renderStats();
     }, err => console.error(err));
 }
 
@@ -352,11 +339,10 @@ window._submit = async function() {
   const btn = document.getElementById("submitBtn");
   btn.disabled = true; btn.textContent = "送出中...";
   try {
-    let orderId;
     await db.runTransaction(async tx => {
       // 重新讀計數器
       const counterSnap = {};
-      for (const key of ["__total", ...items.map(i => i.id)]) {
+      for (const key of ["__total", "__orders", ...items.map(i => i.id)]) {
         const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
         const snap = await tx.get(ref);
         counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
@@ -364,8 +350,7 @@ window._submit = async function() {
       const check = validateOrderQty(orderItems, counterSnap, limits);
       if (!check.ok) throw new Error(check.itemId === "__total" ? "活動總量已滿" : "部分品項數量不足");
 
-      const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc();
-      orderId = orderRef.id;
+      const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc(currentUser.uid);
       const now = firebase.firestore.FieldValue.serverTimestamp();
       tx.set(orderRef, {
         buyerName: name,
@@ -376,9 +361,10 @@ window._submit = async function() {
         editCount: 0,
         isPaid: false
       });
-      // 更新 counters（只寫有下單的品項 + __total，避免對未購買的品項建立 0 數量計數器）
+      // 更新 counters（只寫有下單的品項 + __total + __orders；每人一單，__orders 即下單人數）
       const newCounters = applyOrderCounters(orderItems, counterSnap);
-      for (const key of ["__total", ...orderItems.map(i => i.itemId)]) {
+      newCounters.__orders = (counterSnap.__orders || 0) + 1;
+      for (const key of ["__total", "__orders", ...orderItems.map(i => i.itemId)]) {
         tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: newCounters[key] });
       }
       // 洗單防護：記錄下單時間
@@ -389,7 +375,7 @@ window._submit = async function() {
     });
     // 後三碼：order 建立後才寫入，規則才能驗證「該訂單是自己的」
     try {
-      await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderId).set({
+      await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(currentUser.uid).set({
         phoneLast3: phone
       });
     } catch (e) {
@@ -406,114 +392,6 @@ window._submit = async function() {
   }
   btn.disabled = false; btn.textContent = "送出訂單";
 };
-
-window._deleteOrder = async function(orderId) {
-  const order = myOrders.find(o => o.id === orderId);
-  if (!order) return;
-  if (!canDelete(order.editCount)) { showToast("已達修改上限，需聯絡管理者"); return; }
-  const remain = remainingEdits(order.editCount);
-  if (!confirm(`確定刪除此訂單？剩餘可改/刪 ${remain} 次，刪除後此筆訂單消失。`)) return;
-  try {
-    await db.runTransaction(async tx => {
-      const counterSnap = {};
-      for (const key of ["__total", ...order.items.map(i => i.itemId)]) {
-        const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
-        const snap = await tx.get(ref);
-        counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
-      }
-      const newCounters = releaseOrderCounters(order.items, counterSnap);
-      for (const [key, val] of Object.entries(newCounters)) {
-        tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: val });
-      }
-      tx.delete(db.collection("fgq_events").doc(currentEventId).collection("orders").doc(orderId));
-      tx.delete(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderId));
-      return true;
-    });
-    showToast("訂單已刪除，名額已釋放");
-  } catch (e) {
-    showToast("刪除失敗：" + e.message);
-  }
-};
-
-window._editOrder = async function(orderId) {
-  const order = myOrders.find(o => o.id === orderId);
-  if (!order) return;
-  if (!canEdit(order.editCount)) { showToast("已達修改上限，需聯絡管理者"); return; }
-  showEditForm(order);
-};
-
-function showEditForm(order) {
-  const remain = remainingEdits(order.editCount);
-  const rows = order.items.map((oi, idx) => `
-    <div class="row">
-      <select id="edit-item-${idx}" style="flex:1">
-        ${items.map(it => `<option value="${it.id}" ${it.id === oi.itemId ? 'selected' : ''}>${esc(it.name)} ($${it.price})</option>`).join("")}
-      </select>
-      <input type="number" id="edit-qty-${idx}" value="${oi.qty}" min="1">
-    </div>
-  `).join("");
-  const overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-  overlay.innerHTML = `
-    <div class="modal-box">
-      <h3>修改訂單</h3>
-      <p>修改後剩餘可改/刪 ${remain - 1} 次</p>
-      ${rows}
-      <div style="margin-top:16px">
-        <button class="btn btn-primary" id="saveEdit">儲存修改</button>
-        <button class="btn" style="background:#fff;color:#999;border:1px solid #ddd;margin-top:8px" onclick="this.closest('.modal-overlay').remove()">取消</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  overlay.querySelector("#saveEdit").onclick = async () => {
-    const newItems = order.items.map((_, idx) => {
-      const itemId = overlay.querySelector(`#edit-item-${idx}`).value;
-      const qty = parseInt(overlay.querySelector(`#edit-qty-${idx}`).value);
-      const it = items.find(i => i.id === itemId);
-      return { itemId, name: it.name, price: it.price, qty: qty > 0 ? qty : 1 };
-    });
-    const totalPrice = newItems.reduce((s, i) => s + i.price * i.qty, 0);
-    const limits = {};
-    limits.__total = eventData.totalLimit || 0;
-    items.forEach(it => { limits[it.id] = it.limit || 0; });
-
-    const btn = overlay.querySelector("#saveEdit");
-    btn.disabled = true; btn.textContent = "儲存中...";
-    try {
-      await db.runTransaction(async tx => {
-        const counterSnap = {};
-        const keys = ["__total", ...new Set([...order.items.map(i => i.itemId), ...newItems.map(i => i.itemId)])];
-        for (const key of keys) {
-          const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
-          const snap = await tx.get(ref);
-          counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
-        }
-        // 先釋放舊的，再加新的
-        const released = releaseOrderCounters(order.items, counterSnap);
-        const check = validateOrderQty(newItems, released, limits);
-        if (!check.ok) throw new Error(check.itemId === "__total" ? "活動總量已滿" : "部分品項數量不足");
-        const newCounters = applyOrderCounters(newItems, released);
-        for (const [key, val] of Object.entries(newCounters)) {
-          tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: val });
-        }
-        tx.update(db.collection("fgq_events").doc(currentEventId).collection("orders").doc(order.id), {
-          items: newItems,
-          totalPrice,
-          editCount: (order.editCount || 0) + 1
-        });
-        return true;
-      });
-      overlay.remove();
-      showToast("訂單已修改，名額已更新");
-      await loadCounters();
-      render();
-    } catch (e) {
-      showToast("修改失敗：" + e.message);
-      btn.disabled = false; btn.textContent = "儲存修改";
-    }
-  };
-}
 
 function showToast(msg) {
   const t = document.getElementById("toast");

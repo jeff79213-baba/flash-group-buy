@@ -19,9 +19,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/fgq_events/$(eventId)/orders/$(orderId)).data.createdBy == request.auth.uid;
     }
 
-    // 計數器 id 是否為合法（__total 或活動內確實存在的品項）
+    // 計數器 id 是否為合法（__total/__orders 或活動內確實存在的品項）
     function isValidCounter(eventId, counterId) {
       return counterId == "__total"
+        || counterId == "__orders"
         || get(/databases/$(database)/documents/fgq_events/$(eventId)/items/$(counterId)).data != null;
     }
 
@@ -83,13 +84,17 @@ service cloud.firestore {
         allow write: if isLoggedIn() && request.auth.uid == uid;
       }
 
-      // 訂單
+      // 訂單：訂單 id = 下單者 uid（每人僅可用自己的 uid 建立一單）
       match /orders/{orderId} {
-        allow read: if isLoggedIn();
+        // 只能讀自己的單，或管理員讀全部
+        allow read: if isLoggedIn()
+          && (orderId == request.auth.uid || isAdmin(eventId));
 
-        // 下單：登入者、createdBy=自己、editCount=0、isPaid=false、
-        //       品項非空、不含 phoneLast3、10 秒內同 uid 未下單
+        // 下單：訂單 id 必須是自己的 uid（天然每人一單）、createdBy=自己、
+        //       editCount=0、isPaid=false、品項非空、不含 phoneLast3、
+        //       10 秒內同 uid 未下單
         allow create: if isLoggedIn()
+          && orderId == request.auth.uid
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.editCount == 0
           && request.resource.data.isPaid == false
@@ -101,17 +106,8 @@ service cloud.firestore {
                  - get(/databases/$(database)/documents/fgq_events/$(eventId)/rate_limits/$(request.auth.uid)).data.lastOrderAt
                  >= duration.value(10, 's'));
 
-        // 修改：本人（editCount<3、createdBy 不變、editCount 恰 +1）或管理員（標收款等）
-        allow update: if (isLoggedIn()
-          && resource.data.createdBy == request.auth.uid
-          && resource.data.editCount < 3
-          && request.resource.data.createdBy == request.auth.uid
-          && request.resource.data.editCount == resource.data.editCount + 1)
-          || isAdmin(eventId);
-
-        // 刪除：本人（需未達 edit 上限）或管理員
-        allow delete: if (isLoggedIn() && resource.data.createdBy == request.auth.uid && resource.data.editCount < 3)
-          || isAdmin(eventId);
+        // 訂單一不可修改/刪除（一般使用者）；管理員可經營（改收款、刪單）
+        allow update, delete: if isAdmin(eventId);
       }
     }
 
