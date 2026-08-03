@@ -12,6 +12,19 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/fgq_sessions/$(request.auth.uid)).data.eventId == eventId;
     }
 
+    // 某訂單是否屬於目前使用者
+    function isOrderOwner(eventId, orderId) {
+      return isLoggedIn()
+        && exists(/databases/$(database)/documents/fgq_events/$(eventId)/orders/$(orderId))
+        && get(/databases/$(database)/documents/fgq_events/$(eventId)/orders/$(orderId)).data.createdBy == request.auth.uid;
+    }
+
+    // 計數器 id 是否為合法（__total 或活動內確實存在的品項）
+    function isValidCounter(eventId, counterId) {
+      return counterId == "__total"
+        || get(/databases/$(database)/documents/fgq_events/$(eventId)/items/$(counterId)).data != null;
+    }
+
     // ---- fgq_sessions：登入憑證 ----
     // create：驗證輸入的 adminPassword 與 fgq_admin 相符
     match /fgq_sessions/{uid} {
@@ -54,9 +67,11 @@ service cloud.firestore {
         allow read: if isLoggedIn();
         allow write: if isAdmin(eventId);
         allow create: if isLoggedIn()
+          && isValidCounter(eventId, counterId)
           && request.resource.data.sold is number
           && request.resource.data.sold >= 1;
         allow update: if isLoggedIn()
+          && isValidCounter(eventId, counterId)
           && request.resource.data.sold is number
           && request.resource.data.sold >= 0
           && math.abs(request.resource.data.sold - resource.data.sold) <= 99;
@@ -103,9 +118,8 @@ service cloud.firestore {
     // ---- fgq_orders_phones：手機後三碼（巢狀，管理者依 eventId 查）----
     match /fgq_orders_phones/{eventId}/orders/{orderId} {
       allow read: if isAdmin(eventId);
-      // 下單流程以 transaction 寫入
-      allow create, update: if isLoggedIn();
-      allow delete: if isAdmin(eventId);
+      // 只有該訂單的建立者本人或管理員可寫（防止冒充/覆寫他人後三碼）
+      allow create, update, delete: if isOrderOwner(eventId, orderId) || isAdmin(eventId);
     }
   }
 }
