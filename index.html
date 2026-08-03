@@ -352,7 +352,8 @@ window._submit = async function() {
   const btn = document.getElementById("submitBtn");
   btn.disabled = true; btn.textContent = "送出中...";
   try {
-    const result = await db.runTransaction(async tx => {
+    let orderId;
+    await db.runTransaction(async tx => {
       // 重新讀計數器
       const counterSnap = {};
       for (const key of ["__total", ...items.map(i => i.id)]) {
@@ -364,6 +365,7 @@ window._submit = async function() {
       if (!check.ok) throw new Error(check.itemId === "__total" ? "活動總量已滿" : "部分品項數量不足");
 
       const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc();
+      orderId = orderRef.id;
       const now = firebase.firestore.FieldValue.serverTimestamp();
       tx.set(orderRef, {
         buyerName: name,
@@ -373,10 +375,6 @@ window._submit = async function() {
         createdAt: now,
         editCount: 0,
         isPaid: false
-      });
-      // 後三碼
-      tx.set(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderRef.id), {
-        phoneLast3: phone
       });
       // 更新 counters（只寫有下單的品項 + __total，避免對未購買的品項建立 0 數量計數器）
       const newCounters = applyOrderCounters(orderItems, counterSnap);
@@ -389,6 +387,14 @@ window._submit = async function() {
       });
       return true;
     });
+    // 後三碼：order 建立後才寫入，規則才能驗證「該訂單是自己的」
+    try {
+      await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderId).set({
+        phoneLast3: phone
+      });
+    } catch (e) {
+      console.warn("後三碼寫入失敗：", e.message);
+    }
     showToast("訂單已送出！");
     selected = {};
     document.getElementById("buyerName").value = "";
