@@ -510,11 +510,13 @@ window.deleteEvent = async function() {
     const ordersSnap = await db.collection("fgq_events").doc(currentEventId).collection("orders").get();
     const countersSnap = await db.collection("fgq_events").doc(currentEventId).collection("counters").get();
     const phonesSnap = await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").get();
+    const rateLimitsSnap = await db.collection("fgq_events").doc(currentEventId).collection("rate_limits").get();
     const batch = db.batch();
     itemsSnap.forEach(d => batch.delete(d.ref));
     ordersSnap.forEach(d => batch.delete(d.ref));
     countersSnap.forEach(d => batch.delete(d.ref));
     phonesSnap.forEach(d => batch.delete(d.ref));
+    rateLimitsSnap.forEach(d => batch.delete(d.ref));
     batch.delete(db.collection("fgq_events").doc(currentEventId));
     batch.delete(db.collection("fgq_admin").doc(currentEventId));
     batch.delete(db.collection("fgq_sessions").doc(currentUser.uid));
@@ -692,6 +694,7 @@ window.deleteOrder = async function(orderId) {
       }
       tx.delete(db.collection("fgq_events").doc(currentEventId).collection("orders").doc(orderId));
       tx.delete(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderId));
+      tx.delete(db.collection("fgq_events").doc(currentEventId).collection("rate_limits").doc(orderId));
       return true;
     });
     showToast("訂單已刪除");

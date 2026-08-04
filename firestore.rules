@@ -81,7 +81,9 @@ service cloud.firestore {
       // 洗單防護：每 uid 最後下單時間
       match /rate_limits/{uid} {
         allow read: if isLoggedIn();
-        allow write: if isLoggedIn() && request.auth.uid == uid;
+        // 本人可寫（下單時記錄），管理員可刪除（刪單/刪活動時清理）
+        allow create, update: if isLoggedIn() && request.auth.uid == uid;
+        allow delete: if isLoggedIn() && (request.auth.uid == uid || isAdmin(eventId));
       }
 
       // 訂單：訂單 id = 下單者 uid（每人僅可用自己的 uid 建立一單）
