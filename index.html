@@ -336,12 +336,12 @@ window._editOrder = async function() {
   editing = true;
   selected = {};
   o.items.forEach(i => { selected[i.itemId] = i.qty; });
+  render();
   document.getElementById("buyerName").value = o.buyerName;
   try {
     const pSnap = await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(currentUser.uid).get();
     if (pSnap.exists) document.getElementById("phoneLast3").value = pSnap.data().phoneLast3 || "";
   } catch (e) {}
-  render();
   showToast("請調整品項後點「更新訂單」");
 };
 
