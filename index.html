@@ -371,6 +371,12 @@ window._submit = async function() {
   const limits = {};
   items.forEach(it => { limits[it.id] = it.limit || 0; });
 
+  // 修改模式：走更新流程
+  if (editing) {
+    await updateOrder(name, phone, orderItems, totalPrice, limits);
+    return;
+  }
+
   const btn = document.getElementById("submitBtn");
   btn.disabled = true; btn.textContent = "送出中...";
   try {
@@ -432,6 +438,54 @@ window._submit = async function() {
   }
   btn.disabled = false; btn.textContent = "送出訂單";
 };
+
+async function updateOrder(name, phone, orderItems, totalPrice, limits) {
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true; btn.textContent = "更新中...";
+  try {
+    await db.runTransaction(async tx => {
+      const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc(currentUser.uid);
+      const orderSnap = await tx.get(orderRef);
+      if (!orderSnap.exists) throw new Error("訂單不存在");
+      const old = orderSnap.data();
+      if ((old.editCount || 0) >= 3) throw new Error("訂單已達修改上限，如需調整請聯絡主辦");
+      const counterSnap = {};
+      for (const key of ["__total", ...items.map(i => i.id)]) {
+        const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
+        const snap = await tx.get(ref);
+        counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
+      }
+      // 先釋放舊訂單再驗證，允許把原數量換到其他品項
+      const released = releaseOrderCounters(old.items, counterSnap);
+      const check = validateOrderQty(orderItems, released, limits);
+      if (!check.ok) throw new Error("部分品項數量不足");
+      const next = swapOrderCounters(old.items, orderItems, counterSnap);
+      tx.update(orderRef, {
+        buyerName: name,
+        items: orderItems,
+        totalPrice,
+        editCount: (old.editCount || 0) + 1
+      });
+      const keys = new Set(["__total", ...old.items.map(i => i.itemId), ...orderItems.map(i => i.itemId)]);
+      for (const key of keys) {
+        tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: next[key] });
+      }
+      // 後三碼更新（order 存在時本人可寫）
+      tx.set(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(currentUser.uid), { phoneLast3: phone });
+      return true;
+    });
+    showToast("訂單已更新");
+    editing = false;
+    selected = {};
+    document.getElementById("buyerName").value = "";
+    document.getElementById("phoneLast3").value = "";
+    await loadCounters();
+    render();
+  } catch (e) {
+    showToast("更新失敗：" + e.message);
+  }
+  btn.disabled = false; btn.textContent = "送出訂單";
+}
 
 function showToast(msg) {
   const t = document.getElementById("toast");
