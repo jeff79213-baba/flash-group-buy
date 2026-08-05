@@ -487,6 +487,48 @@ async function updateOrder(name, phone, orderItems, totalPrice, limits) {
   btn.disabled = false; btn.textContent = "送出訂單";
 }
 
+window._cancelOrder = async function() {
+  const o = myOrders[0];
+  if (!o) return;
+  if (!canDelete(o.editCount)) { showToast("訂單已達修改上限，如需調整請聯絡主辦"); return; }
+  if (!confirm("確定取消訂單？取消後可重新下單。剩餘修改/取消次數：" + remainingEdits(o.editCount))) return;
+  try {
+    await db.runTransaction(async tx => {
+      const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc(currentUser.uid);
+      const orderSnap = await tx.get(orderRef);
+      if (!orderSnap.exists) throw new Error("訂單不存在");
+      const old = orderSnap.data();
+      if ((old.editCount || 0) >= 3) throw new Error("訂單已達修改上限");
+      const counterSnap = {};
+      for (const key of ["__total", "__orders", ...items.map(i => i.id)]) {
+        const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
+        const snap = await tx.get(ref);
+        counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
+      }
+      let next = releaseOrderCounters(old.items, counterSnap);
+      next.__orders = Math.max(0, (next.__orders || 0) - 1);
+      tx.delete(orderRef);
+      for (const key of ["__total", "__orders", ...old.items.map(i => i.itemId)]) {
+        tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: next[key] });
+      }
+      // 清除洗單防護，允許同一裝置重新下單
+      tx.delete(db.collection("fgq_events").doc(currentEventId).collection("rate_limits").doc(currentUser.uid));
+      // 後三碼刪除（order 尚存在時本人可刪）
+      tx.delete(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(currentUser.uid));
+      return true;
+    });
+    showToast("訂單已取消");
+    editing = false;
+    selected = {};
+    document.getElementById("buyerName").value = "";
+    document.getElementById("phoneLast3").value = "";
+    await loadCounters();
+    render();
+  } catch (e) {
+    showToast("取消失敗：" + e.message);
+  }
+};
+
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg; t.classList.add("show");
