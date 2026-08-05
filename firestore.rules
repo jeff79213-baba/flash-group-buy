@@ -108,8 +108,10 @@ service cloud.firestore {
                  - get(/databases/$(database)/documents/fgq_events/$(eventId)/rate_limits/$(request.auth.uid)).data.lastOrderAt
                  >= duration.value(10, 's'));
 
-        // 訂單一不可修改/刪除（一般使用者）；管理員可經營（改收款、刪單）
-        allow update, delete: if isAdmin(eventId);
+        // 訂單不可由本人覆寫（每人限一單）：管理員可管理他人的單，但不可 update 自己 uid 的訂單
+        // （防止同 uid 連續下單時，管理員身份的第二單覆寫第一單）
+        allow update: if isAdmin(eventId) && orderId != request.auth.uid;
+        allow delete: if isAdmin(eventId);
       }
     }
 

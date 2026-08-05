@@ -350,6 +350,11 @@ window._submit = async function() {
       if (!check.ok) throw new Error("部分品項數量不足");
 
       const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc(currentUser.uid);
+      // 每人限一單：訂單已存在即拒絕，防止同 uid（即使管理員身份）第二單覆寫第一單
+      const orderSnap = await tx.get(orderRef);
+      if (orderSnap.exists) {
+        throw new Error("你已經下過單了，每人限一單");
+      }
       const now = firebase.firestore.FieldValue.serverTimestamp();
       tx.set(orderRef, {
         buyerName: name,
