@@ -86,7 +86,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script type="module">
 import { db } from "./firebase-config.js";
-import { calculateRemaining, validateOrderQty, applyOrderCounters } from "./lib/quantity.js";
+import { calculateRemaining, validateOrderQty, applyOrderCounters, releaseOrderCounters, swapOrderCounters } from "./lib/quantity.js";
+import { canEdit, canDelete, remainingEdits } from "./lib/editlimit.js";
 
 let currentUser = null;
 let currentEventId = null;
@@ -95,6 +96,7 @@ let items = [];
 let counters = {};        // { itemId: sold, __total: sold, __orders: 下單人數 }
 let selected = {};        // { itemId: qty }
 let myOrders = [];        // 本人訂單
+let editing = false;            // 是否處於「修改訂單」模式
 
 const app = document.getElementById("app");
 
@@ -215,7 +217,8 @@ function render() {
           <label>手機後三碼（取貨/對帳用）</label>
           <input type="text" id="phoneLast3" placeholder="例：123" maxlength="3" inputmode="numeric" pattern="[0-9]{3}">
         </div>
-        <button class="btn btn-primary" id="submitBtn" onclick="window._submit()">送出訂單</button>
+        <button class="btn btn-primary" id="submitBtn" onclick="window._submit()">${editing ? '更新訂單' : '送出訂單'}</button>
+        ${editing ? '<button class="btn-sm btn-del" style="margin-top:8px" onclick="window._cancelEdit()">取消修改</button>' : ''}
       </div>
     </div>
 
@@ -252,6 +255,15 @@ function renderMyOrders() {
   if (myOrders.length === 0) return '<div class="empty">你還沒有訂單</div>';
   return myOrders.map(o => {
     const detail = o.items.map(i => i.name + " x" + i.qty + " ($" + i.price * i.qty + ")").join("、");
+    const remain = remainingEdits(o.editCount);
+    const actions = (canEdit(o.editCount) || canDelete(o.editCount))
+      ? `
+      <div style="font-size:11px;color:#999;margin-top:6px">還可修改/取消 ${remain} 次</div>
+      <div style="margin-top:8px">
+        ${canEdit(o.editCount) ? '<button class="btn-sm btn-edit" onclick="window._editOrder()">修改</button>' : ''}
+        ${canDelete(o.editCount) ? '<button class="btn-sm btn-del" onclick="window._cancelOrder()">取消</button>' : ''}
+      </div>`
+      : '<div style="font-size:11px;color:#999;margin-top:6px">訂單已達修改上限，如需調整請聯絡主辦</div>';
     return `
       <div class="order-item">
         <div class="order-name">
@@ -259,7 +271,7 @@ function renderMyOrders() {
         </div>
         <div class="order-detail">${esc(detail)}</div>
         <div class="order-total">合計 $${o.totalPrice}</div>
-        <div style="font-size:11px;color:#999;margin-top:6px">訂單送出後不可修改，如需調整請聯絡主辦</div>
+        ${actions}
       </div>`;
   }).join("");
 }
@@ -316,6 +328,30 @@ function updateTotal() {
   const el = document.getElementById("subtotal");
   if (el) el.textContent = "$" + total;
 }
+
+window._editOrder = async function() {
+  const o = myOrders[0];
+  if (!o) return;
+  if (!canEdit(o.editCount)) { showToast("訂單已達修改上限，如需調整請聯絡主辦"); return; }
+  editing = true;
+  selected = {};
+  o.items.forEach(i => { selected[i.itemId] = i.qty; });
+  document.getElementById("buyerName").value = o.buyerName;
+  try {
+    const pSnap = await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(currentUser.uid).get();
+    if (pSnap.exists) document.getElementById("phoneLast3").value = pSnap.data().phoneLast3 || "";
+  } catch (e) {}
+  render();
+  showToast("請調整品項後點「更新訂單」");
+};
+
+window._cancelEdit = function() {
+  editing = false;
+  selected = {};
+  document.getElementById("buyerName").value = "";
+  document.getElementById("phoneLast3").value = "";
+  render();
+};
 
 window._submit = async function() {
   const name = document.getElementById("buyerName").value.trim();
