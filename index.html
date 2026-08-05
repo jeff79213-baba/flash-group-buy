@@ -333,7 +333,6 @@ window._submit = async function() {
 
   const totalPrice = orderItems.reduce((s, i) => s + i.price * i.qty, 0);
   const limits = {};
-  limits.__total = eventData.totalLimit || 0;
   items.forEach(it => { limits[it.id] = it.limit || 0; });
 
   const btn = document.getElementById("submitBtn");
@@ -348,7 +347,7 @@ window._submit = async function() {
         counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
       }
       const check = validateOrderQty(orderItems, counterSnap, limits);
-      if (!check.ok) throw new Error(check.itemId === "__total" ? "活動總量已滿" : "部分品項數量不足");
+      if (!check.ok) throw new Error("部分品項數量不足");
 
       const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc(currentUser.uid);
       const now = firebase.firestore.FieldValue.serverTimestamp();

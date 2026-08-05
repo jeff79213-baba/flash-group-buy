@@ -185,10 +185,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
           <label>收單時間（選填）</label>
           <input type="datetime-local" id="editEventDeadline">
         </div>
-        <div class="input-group">
-          <label>活動總量上限（0 = 不限）</label>
-          <input type="number" id="editEventTotalLimit" min="0">
-        </div>
         <button class="btn btn-primary" style="margin-bottom:8px" onclick="saveEventSettings()">儲存設定</button>
         <button class="btn" style="background:#fff;color:#e74c3c;border:2px solid #e74c3c" onclick="showCredentialCard()">查看憑證</button>
         <button class="btn" style="background:#fff;color:#e74c3c;border:2px solid #e74c3c;margin-top:8px" onclick="deleteEvent()">刪除此活動</button>
@@ -353,7 +349,6 @@ window.createNewEvent = async function() {
       name,
       shortCode: sc,
       shareCode,
-      totalLimit: 0,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdBy: currentUser.uid
     });
@@ -456,7 +451,6 @@ async function loadAdminData() {
   document.getElementById("adminShortCode").textContent = "活動代碼：" + eventData.shortCode;
   document.getElementById("editEventName").value = eventData.name || "";
   document.getElementById("editEventShortCode").value = eventData.shortCode || "";
-  document.getElementById("editEventTotalLimit").value = eventData.totalLimit || 0;
   if (eventData.deadline) {
     const dt = new Date(eventData.deadline.seconds * 1000);
     const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -479,14 +473,13 @@ window.saveEventSettings = async function() {
   const sc = document.getElementById("editEventShortCode").value.trim().toUpperCase();
   const pw = document.getElementById("editEventPassword").value.trim();
   const dl = document.getElementById("editEventDeadline").value;
-  const totalLimit = parseInt(document.getElementById("editEventTotalLimit").value) || 0;
   if (!name) { showToast("請輸入活動名稱"); return; }
   if (!sc || sc.length < 3) { showToast("活動代碼需至少 3 碼"); return; }
   if (!pw) { showToast("請輸入管理密碼"); return; }
   try {
     const dup = await db.collection("fgq_events").where("shortCode", "==", sc).limit(1).get();
     if (!dup.empty && dup.docs[0].id !== currentEventId) { showToast("此代碼已被其他活動使用"); return; }
-    const update = { name, shortCode: sc, totalLimit };
+    const update = { name, shortCode: sc };
     if (dl) update.deadline = firebase.firestore.Timestamp.fromDate(new Date(dl));
     else update.deadline = firebase.firestore.FieldValue.delete();
     await db.collection("fgq_events").doc(currentEventId).update(update);
@@ -540,20 +533,13 @@ async function loadItemsAdmin() {
   updateItemLimitHint();
 }
 
-// 依活動總量上限調整新增品項的上限輸入限制與提示
+// 新增品項上限提示
 function updateItemLimitHint() {
-  const totalLimit = (eventData && eventData.totalLimit) || 0;
   const inp = document.getElementById("newItemLimit");
   const hint = document.getElementById("itemLimitHint");
-  if (totalLimit > 0) {
-    inp.max = totalLimit;
-    inp.title = "此品項最多可購買幾份，不可超過活動總量上限 " + totalLimit + "；0 = 不限量";
-    if (hint) hint.textContent = "上限 = 此品項最多可購買份數，不可超過活動總量上限 " + totalLimit + "；0 = 不限量";
-  } else {
-    inp.removeAttribute("max");
-    inp.title = "此品項最多可購買幾份，0 = 不限量";
-    if (hint) hint.textContent = "上限 = 此品項最多可購買份數；0 = 不限量";
-  }
+  inp.removeAttribute("max");
+  inp.title = "此品項最多可購買幾份，0 = 不限量";
+  if (hint) hint.textContent = "上限 = 此品項最多可購買份數；0 = 不限量";
 }
 
 function renderItemsEdit() {
@@ -579,12 +565,7 @@ window.addItem = async function() {
   const limit = parseInt(document.getElementById("newItemLimit").value);
   if (!name) { showToast("請輸入品項名稱"); return; }
   if (isNaN(price) || price < 0) { showToast("請輸入正確價格"); return; }
-  const totalLimit = (eventData && eventData.totalLimit) || 0;
   const effLimit = (isNaN(limit) || limit < 0) ? 0 : limit;
-  if (totalLimit > 0 && effLimit > totalLimit) {
-    showToast("品項上限不可超過活動總量上限 " + totalLimit);
-    return;
-  }
   try {
     await db.collection("fgq_events").doc(currentEventId).collection("items").add({
       name,
