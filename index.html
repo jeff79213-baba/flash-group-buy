@@ -420,12 +420,13 @@ window._submit = async function() {
       //     transaction 內規則 exists(rate_limits) 看到自己剛寫的 lastOrderAt 而誤擋。
       return true;
     });
-    showToast("訂單已送出！");
     selected = {};
     document.getElementById("buyerName").value = "";
     document.getElementById("phoneLast3").value = "";
     await loadCounters();
     render();
+    // toast 在 render 後再顯示，避免測試看到 toast 就填下一筆而被 render 清空表單
+    showToast("訂單已送出！");
   } catch (e) {
     showToast("送出失敗：" + e.message);
   }
@@ -462,12 +463,13 @@ window._cancelOrder = async function(orderKey) {
       });
       return true;
     });
-    showToast("訂單已取消");
     selected = {};
     document.getElementById("buyerName").value = "";
     document.getElementById("phoneLast3").value = "";
     await loadCounters();
     render();
+    // toast 在 render 後再顯示（同 _submit，避免表單被 render 清空）
+    showToast("訂單已取消");
   } catch (e) {
     showToast("取消失敗：" + e.message);
   }
