@@ -329,14 +329,11 @@ window._sel = function(id, checked) {
     const sold = counters[id] || 0;
     const remain = calculateRemaining(limit, sold);
     if (limit && remain <= 0) { showToast("此品項已售完"); return; }
-    const cb = document.querySelector(`.item-check[data-id="${id}"]`);
-    if (cb) cb.checked = true;
     if (!selected[id]) selected[id] = 1;
-    document.getElementById("qty-" + id).textContent = selected[id];
   } else {
     selected[id] = 0;
-    document.getElementById("qty-" + id).textContent = "0";
   }
+  renderItemsList();
   updateTotal();
 };
 
@@ -347,11 +344,7 @@ window._qty = function(id, delta) {
   const sold = counters[id] || 0;
   const max = limit ? (limit - sold) : 9999;
   selected[id] = Math.max(0, Math.min((selected[id] || 0) + delta, max));
-  if (selected[id] === 0) {
-    const cb = document.querySelector(`.item-check[data-id="${id}"]`);
-    if (cb) cb.checked = false;
-  }
-  document.getElementById("qty-" + id).textContent = selected[id];
+  renderItemsList();
   updateTotal();
 };
 
