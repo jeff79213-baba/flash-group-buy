@@ -478,7 +478,12 @@ window._cancelOrder = async function(orderKey) {
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg; t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2000);
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.classList.remove("show");
+    // 淡出後清空文字，避免舊 toast 文字殘留被誤判為新的提示
+    t.textContent = "";
+  }, 2000);
 }
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML }
 

@@ -10,6 +10,16 @@ const EVENT_NAME = process.env.E2E_EVENT_NAME || "E2E測試揪團";
 const ITEM_LIMITED = "測試蛋糕";
 const ITEM_UNLIMITED = "測試餅乾";
 
+// 送出訂單並等待完成：submitBtn 重新啟用代表 transaction + render 皆完成（
+// 避免依賴 toast 時序——toast 淡出後文字可能殘留，造成上次 toast 被誤判為本次完成）
+async function submitOrder(page, name, phone) {
+  await page.locator(`.item-check[data-id="cake"]`).check();
+  await page.fill("#buyerName", name);
+  await page.fill("#phoneLast3", phone);
+  await page.click("#submitBtn");
+  await expect(page.locator("#submitBtn")).toBeEnabled({ timeout: 15000 });
+}
+
 test("點餐頁載入活動並顯示品項剩餘", async ({ page }) => {
   await page.goto(BASE + "index.html?id=" + SHARE_CODE);
   await expect(page.getByText(EVENT_NAME)).toBeVisible({ timeout: 20000 });
@@ -46,11 +56,7 @@ test("下單 → 顯示在我的訂單 + 統計張數增加", async ({ page }) =
   const statsText = await page.locator("#statsList").innerText();
   const beforeOrders = parseInt(statsText.match(/(\d+)\s*張訂單/)?.[1] || "0", 10);
 
-  await page.locator(`.item-check[data-id="cake"]`).check();
-  await page.fill("#buyerName", "E2E買家");
-  await page.fill("#phoneLast3", "123");
-  await page.click("#submitBtn");
-
+  await submitOrder(page, "E2E買家", "123");
   await expect(page.getByText("訂單已送出！")).toBeVisible({ timeout: 15000 });
   await expect(page.locator("#myOrdersList").getByText("E2E買家")).toBeVisible();
   await expect(page.locator("#statsList")).toHaveText(new RegExp((beforeOrders + 1) + "\\s*張訂單"), { timeout: 15000 });
@@ -79,10 +85,7 @@ test("同組合重複下單被擋", async ({ page }) => {
   await page.goto(BASE + "index.html?id=" + SHARE_CODE);
   await expect(page.getByText(EVENT_NAME)).toBeVisible({ timeout: 20000 });
 
-  await page.locator(`.item-check[data-id="cake"]`).check();
-  await page.fill("#buyerName", "重複測試");
-  await page.fill("#phoneLast3", "111");
-  await page.click("#submitBtn");
+  await submitOrder(page, "重複測試", "111");
   await expect(page.getByText("訂單已送出！")).toBeVisible({ timeout: 15000 });
 
   // 同姓名+同後三碼再下 → 被擋
@@ -97,24 +100,15 @@ test("不同組合（同人可多筆）可再下單", async ({ page }) => {
   await page.goto(BASE + "index.html?id=" + SHARE_CODE);
   await expect(page.getByText(EVENT_NAME)).toBeVisible({ timeout: 20000 });
 
-  await page.locator(`.item-check[data-id="cake"]`).check();
-  await page.fill("#buyerName", "多筆測試A");
-  await page.fill("#phoneLast3", "222");
-  await page.click("#submitBtn");
+  await submitOrder(page, "多筆測試A", "222");
   await expect(page.getByText("訂單已送出！")).toBeVisible({ timeout: 15000 });
 
   // 同人不同後三碼 → 可再下
-  await page.locator(`.item-check[data-id="cake"]`).check();
-  await page.fill("#buyerName", "多筆測試A");
-  await page.fill("#phoneLast3", "333");
-  await page.click("#submitBtn");
+  await submitOrder(page, "多筆測試A", "333");
   await expect(page.getByText("訂單已送出！")).toBeVisible({ timeout: 15000 });
 
   // 不同人名同後三碼 → 可再下
-  await page.locator(`.item-check[data-id="cake"]`).check();
-  await page.fill("#buyerName", "多筆測試B");
-  await page.fill("#phoneLast3", "222");
-  await page.click("#submitBtn");
+  await submitOrder(page, "多筆測試B", "222");
   await expect(page.getByText("訂單已送出！")).toBeVisible({ timeout: 15000 });
 
   await expect(page.locator("#myOrdersList").getByText("多筆測試A")).toHaveCount(2);
@@ -128,10 +122,7 @@ test("取消訂單 → 10 秒內同組合重下被擋 → 10 秒後可重下", a
   await expect(page.getByText(EVENT_NAME)).toBeVisible({ timeout: 20000 });
 
   // 下單
-  await page.locator(`.item-check[data-id="cake"]`).check();
-  await page.fill("#buyerName", "冷卻測試");
-  await page.fill("#phoneLast3", "444");
-  await page.click("#submitBtn");
+  await submitOrder(page, "冷卻測試", "444");
   await expect(page.getByText("訂單已送出！")).toBeVisible({ timeout: 15000 });
 
   // 取消
@@ -149,10 +140,7 @@ test("取消訂單 → 10 秒內同組合重下被擋 → 10 秒後可重下", a
 
   // 等 11 秒後可重下
   await page.waitForTimeout(11000);
-  await page.locator(`.item-check[data-id="cake"]`).check();
-  await page.fill("#buyerName", "冷卻測試");
-  await page.fill("#phoneLast3", "444");
-  await page.click("#submitBtn");
+  await submitOrder(page, "冷卻測試", "444");
   await expect(page.getByText("訂單已送出！")).toBeVisible({ timeout: 15000 });
   await page.close();
 });
@@ -168,10 +156,7 @@ test("管理者登入後台並看到訂單（含後三碼）", async ({ browser 
 
   await buyer.goto(BASE + "index.html?id=" + SHARE_CODE);
   await expect(buyer.getByText(EVENT_NAME)).toBeVisible({ timeout: 20000 });
-  await buyer.locator(`.item-check[data-id="cake"]`).check();
-  await buyer.fill("#buyerName", "後台檢視測試");
-  await buyer.fill("#phoneLast3", "555");
-  await buyer.click("#submitBtn");
+  await submitOrder(buyer, "後台檢視測試", "555");
   await expect(buyer.getByText("訂單已送出！")).toBeVisible({ timeout: 15000 });
 
   await admin.locator(".tab:has-text('訂單列表')").click();
