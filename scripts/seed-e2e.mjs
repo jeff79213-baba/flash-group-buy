@@ -27,6 +27,12 @@ async function putDoc(url, body, H) {
     const docs = ((await od.json()).documents) || [];
     for (const d of docs) await fetch(BASE + '/fgq_events/' + evId + '/orders/' + encodeURIComponent(d.name.split('/').pop()), { method: 'DELETE', headers: H }).catch(() => {});
   } catch (e) {}
+  // 清舊 rate_limits（以 orderKey 為鍵，避免冷卻殘留影響測試）
+  try {
+    const rl = await fetch(BASE + '/fgq_events/' + evId + '/rate_limits?pageSize=300', { headers: H });
+    const rdocs = ((await rl.json()).documents) || [];
+    for (const d of rdocs) await fetch(BASE + '/fgq_events/' + evId + '/rate_limits/' + encodeURIComponent(d.name.split('/').pop()), { method: 'DELETE', headers: H }).catch(() => {});
+  } catch (e) {}
   // 重設計數器（保持剩餘數量乾淨）
   try {
     for (const c of ['__total', '__orders', 'cake', 'cookie']) {

@@ -75,7 +75,7 @@ service cloud.firestore {
       match /rate_limits/{orderKey} {
         allow read: if isLoggedIn();
         // 本人下單/取消時寫入；管理員可刪除（刪單/刪活動時清理）
-        allow create, update: if isLoggedIn() && request.resource.data.lastOrderAt != null;
+        allow create, update: if isLoggedIn() && request.resource.data.lastOrderAt is timestamp;
         allow delete: if isAdmin(eventId);
       }
 

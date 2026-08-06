@@ -415,10 +415,9 @@ window._submit = async function() {
       for (const key of ["__total", "__orders", ...orderItems.map(i => i.itemId)]) {
         tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: newCounters[key] });
       }
-      // 洗單防護：以組合為鍵記錄下單時間
-      tx.set(db.collection("fgq_events").doc(currentEventId).collection("rate_limits").doc(orderKey), {
-        lastOrderAt: now
-      });
+      // 註：rate_limits 只在「取消」時寫入（擋取消後 10 秒內重下）；
+      //     同組合連刷已由 orderKey 文件 id 唯一性天然阻擋，此處不需寫，避免
+      //     transaction 內規則 exists(rate_limits) 看到自己剛寫的 lastOrderAt 而誤擋。
       return true;
     });
     showToast("訂單已送出！");
