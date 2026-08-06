@@ -241,7 +241,6 @@ let currentEventId = null;
 let eventData = null;
 let itemsData = [];
 let ordersData = [];
-let phonesMap = {};   // orderId -> phoneLast3
 let counters = {};    // itemId -> sold
 
 document.getElementById("loading").style.display = "none";
@@ -502,13 +501,11 @@ window.deleteEvent = async function() {
     const itemsSnap = await db.collection("fgq_events").doc(currentEventId).collection("items").get();
     const ordersSnap = await db.collection("fgq_events").doc(currentEventId).collection("orders").get();
     const countersSnap = await db.collection("fgq_events").doc(currentEventId).collection("counters").get();
-    const phonesSnap = await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").get();
     const rateLimitsSnap = await db.collection("fgq_events").doc(currentEventId).collection("rate_limits").get();
     const batch = db.batch();
     itemsSnap.forEach(d => batch.delete(d.ref));
     ordersSnap.forEach(d => batch.delete(d.ref));
     countersSnap.forEach(d => batch.delete(d.ref));
-    phonesSnap.forEach(d => batch.delete(d.ref));
     rateLimitsSnap.forEach(d => batch.delete(d.ref));
     batch.delete(db.collection("fgq_events").doc(currentEventId));
     batch.delete(db.collection("fgq_admin").doc(currentEventId));
@@ -599,12 +596,6 @@ function listenOrdersAdmin() {
     .onSnapshot(async snap => {
       ordersData = [];
       snap.forEach(d => ordersData.push({ id: d.id, ...d.data() }));
-      // 讀取後三碼
-      try {
-        phonesMap = {};
-        const pSnap = await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").get();
-        pSnap.forEach(d => { phonesMap[d.id] = d.data().phoneLast3 || ""; });
-      } catch (e) { phonesMap = {}; }
       let total = 0;
       ordersData.forEach(o => { total += (o.totalPrice || 0); });
       document.getElementById("grandTotal").textContent = "$" + total;
@@ -618,7 +609,7 @@ function renderOrdersAdmin() {
   el.innerHTML = ordersData.map(o => {
     const detail = o.items.map(i => i.name + " x" + i.qty + " ($" + i.price * i.qty + ")").join("、");
     const badge = o.isPaid ? '<span class="paid-badge">已收款</span>' : '<span class="unpaid-badge">未收款</span>';
-    const phone = phonesMap[o.id] || "—";
+    const phone = o.phoneLast3 || "—";
     const time = o.createdAt ? o.createdAt.toDate().toLocaleString("zh-TW", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
     const btn = o.isPaid
       ? `<button class="btn btn-outline btn-sm" onclick="togglePaid('${o.id}',false)">取消收款</button>`
@@ -674,7 +665,6 @@ window.deleteOrder = async function(orderId) {
           { sold: Math.max(0, counterSnap.__orders - 1) });
       }
       tx.delete(db.collection("fgq_events").doc(currentEventId).collection("orders").doc(orderId));
-      tx.delete(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(orderId));
       tx.delete(db.collection("fgq_events").doc(currentEventId).collection("rate_limits").doc(orderId));
       return true;
     });

@@ -12,13 +12,6 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/fgq_sessions/$(request.auth.uid)).data.eventId == eventId;
     }
 
-    // 某訂單是否屬於目前使用者
-    function isOrderOwner(eventId, orderId) {
-      return isLoggedIn()
-        && exists(/databases/$(database)/documents/fgq_events/$(eventId)/orders/$(orderId))
-        && get(/databases/$(database)/documents/fgq_events/$(eventId)/orders/$(orderId)).data.createdBy == request.auth.uid;
-    }
-
     // 計數器 id 是否為合法（__total/__orders 或活動內確實存在的品項）
     function isValidCounter(eventId, counterId) {
       return counterId == "__total"
@@ -78,54 +71,44 @@ service cloud.firestore {
           && math.abs(request.resource.data.sold - resource.data.sold) <= 99;
       }
 
-      // 洗單防護：每 uid 最後下單時間
-      match /rate_limits/{uid} {
+      // 洗單防護：每 (後三碼+姓名) 最後下單/取消時間；取消後 10 秒內不可用相同組合重下
+      match /rate_limits/{orderKey} {
         allow read: if isLoggedIn();
-        // 本人可寫（下單時記錄），管理員可刪除（刪單/刪活動時清理）
-        allow create, update: if isLoggedIn() && request.auth.uid == uid;
-        allow delete: if isLoggedIn() && (request.auth.uid == uid || isAdmin(eventId));
+        // 本人下單/取消時寫入；管理員可刪除（刪單/刪活動時清理）
+        allow create, update: if isLoggedIn() && request.resource.data.lastOrderAt != null;
+        allow delete: if isAdmin(eventId);
       }
 
-      // 訂單：訂單 id = 下單者 uid（每人僅可用自己的 uid 建立一單）
+      // 訂單：訂單 id = orderKey（後三碼_姓名），同活動內 (姓名+後三碼) 唯一
       match /orders/{orderId} {
         // 只能讀自己的單，或管理員讀全部
         allow read: if isLoggedIn()
-          && (orderId == request.auth.uid || isAdmin(eventId));
+          && (resource.data.createdBy == request.auth.uid || isAdmin(eventId));
 
-        // 下單：訂單 id 必須是自己的 uid（天然每人一單）、createdBy=自己、
-        //       editCount=0、isPaid=false、品項非空、不含 phoneLast3、
-        //       10 秒內同 uid 未下單
+        // 下單：訂單 id 必須等於 orderKey 欄位、createdBy=自己、
+        //       姓名非空、後三碼 3 位數字、isPaid=false、品項非空、
+        //       10 秒內同組合未下單/取消
         allow create: if isLoggedIn()
-          && orderId == request.auth.uid
+          && request.resource.data.orderKey == orderId
           && request.resource.data.createdBy == request.auth.uid
-          && request.resource.data.editCount == 0
+          && request.resource.data.buyerName is string
+          && request.resource.data.buyerName.size() > 0
+          && request.resource.data.phoneLast3 is string
+          && request.resource.data.phoneLast3.matches('[0-9]{3}')
           && request.resource.data.isPaid == false
           && request.resource.data.items is list
           && request.resource.data.items.size() > 0
-          && !("phoneLast3" in request.resource.data)
-          && (!exists(/databases/$(database)/documents/fgq_events/$(eventId)/rate_limits/$(request.auth.uid))
+          && (!exists(/databases/$(database)/documents/fgq_events/$(eventId)/rate_limits/$(orderId))
               || request.time
-                 - get(/databases/$(database)/documents/fgq_events/$(eventId)/rate_limits/$(request.auth.uid)).data.lastOrderAt
+                 - get(/databases/$(database)/documents/fgq_events/$(eventId)/rate_limits/$(orderId)).data.lastOrderAt
                  >= duration.value(10, 's'));
 
-        // 本人可修改/取消自己的訂單（最多 editCount 上限次）；管理員可經營全部。
-        // 本人 update 必須 editCount 恰好 +1 且 <=3、isPaid/createdBy 不可變（防覆寫、防改收款）。
-        allow update: if isAdmin(eventId)
-          || (orderId == request.auth.uid
-              && request.resource.data.editCount == resource.data.editCount + 1
-              && request.resource.data.editCount <= 3
-              && request.resource.data.isPaid == resource.data.isPaid
-              && request.resource.data.createdBy == resource.data.createdBy);
+        // 一般使用者不可更新訂單（無修改功能）；僅管理員經營全部
+        allow update: if isAdmin(eventId);
+        // 管理員可刪除任何單；本人可刪除自己的單（取消）
         allow delete: if isAdmin(eventId)
-          || (orderId == request.auth.uid && resource.data.editCount < 3);
+          || (resource.data.createdBy == request.auth.uid);
       }
-    }
-
-    // ---- fgq_orders_phones：手機後三碼（巢狀，管理者依 eventId 查）----
-    match /fgq_orders_phones/{eventId}/orders/{orderId} {
-      allow read: if isAdmin(eventId);
-      // 只有該訂單的建立者本人或管理員可寫（防止冒充/覆寫他人後三碼）
-      allow create, update, delete: if isOrderOwner(eventId, orderId) || isAdmin(eventId);
     }
   }
 }

@@ -86,17 +86,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script type="module">
 import { db } from "./firebase-config.js";
-import { calculateRemaining, validateOrderQty, applyOrderCounters, releaseOrderCounters, swapOrderCounters } from "./lib/quantity.js";
-import { canEdit, canDelete, remainingEdits } from "./lib/editlimit.js";
+import { calculateRemaining, validateOrderQty, applyOrderCounters, releaseOrderCounters } from "./lib/quantity.js";
+import { buildOrderKey } from "./lib/orderKey.js";
 
 let currentUser = null;
 let currentEventId = null;
 let eventData = null;
 let items = [];
-let counters = {};        // { itemId: sold, __total: sold, __orders: 下單人數 }
+let counters = {};        // { itemId: sold, __total: sold, __orders: 訂單數 }
 let selected = {};        // { itemId: qty }
 let myOrders = [];        // 本人訂單
-let editing = false;            // 是否處於「修改訂單」模式
 
 const app = document.getElementById("app");
 
@@ -173,18 +172,19 @@ function render() {
     const remain = calculateRemaining(limit, sold);
     const soldout = limit && remain <= 0;
     const remainTxt = !limit ? "不限量" : (soldout ? "已售完" : "剩餘 " + remain + " 份");
+    const maxReached = limit && (selected[it.id] || 0) >= remain;
     return `
       <div class="item-row">
-        <input type="checkbox" class="item-check" data-id="${it.id}" ${deadlinePassed ? 'disabled' : ''} ${selected[it.id] ? 'checked' : ''} onchange="window._sel('${it.id}', this.checked)">
+        <input type="checkbox" class="item-check" data-id="${it.id}" ${soldout || deadlinePassed ? 'disabled' : ''} ${selected[it.id] ? 'checked' : ''} onchange="window._sel('${it.id}', this.checked)">
         <div class="item-info">
           <div class="item-name">${esc(it.name)}</div>
           <div class="item-price">$${it.price}</div>
           <div class="item-remain ${soldout ? 'soldout' : ''}">${remainTxt}</div>
         </div>
         <div class="qty-wrap">
-          <button ${soldout || deadlinePassed ? 'disabled' : ''} onclick="window._qty('${it.id}',-1)">-</button>
+          <button ${soldout || deadlinePassed || (selected[it.id] || 0) <= 0 ? 'disabled' : ''} onclick="window._qty('${it.id}',-1)">-</button>
           <span id="qty-${it.id}">${selected[it.id] || 0}</span>
-          <button ${soldout || deadlinePassed ? 'disabled' : ''} onclick="window._qty('${it.id}',1)">+</button>
+          <button ${soldout || deadlinePassed || maxReached ? 'disabled' : ''} onclick="window._qty('${it.id}',1)">+</button>
         </div>
       </div>`;
   }).join("") || '<div class="empty">管理者尚未新增品項</div>';
@@ -217,8 +217,7 @@ function render() {
           <label>手機後三碼（取貨/對帳用）</label>
           <input type="text" id="phoneLast3" placeholder="例：123" maxlength="3" inputmode="numeric" pattern="[0-9]{3}">
         </div>
-        <button class="btn btn-primary" id="submitBtn" onclick="window._submit()">${editing ? '更新訂單' : '送出訂單'}</button>
-        ${editing ? '<button class="btn-sm btn-del" style="margin-top:8px" onclick="window._cancelEdit()">取消修改</button>' : ''}
+        <button class="btn btn-primary" id="submitBtn" onclick="window._submit()">送出訂單</button>
       </div>
     </div>
 
@@ -235,13 +234,13 @@ function render() {
 }
 
 function renderStats() {
-  const people = counters.__orders || 0;
+  const orders = counters.__orders || 0;
   const totalQty = counters.__total || 0;
   return `
     <div style="display:flex;gap:12px;text-align:center">
       <div style="flex:1;padding:12px;background:#fff1f0;border-radius:10px">
-        <div style="font-size:26px;font-weight:700;color:#e74c3c">${people}</div>
-        <div style="font-size:12px;color:#666;margin-top:2px">人下單</div>
+        <div style="font-size:26px;font-weight:700;color:#e74c3c">${orders}</div>
+        <div style="font-size:12px;color:#666;margin-top:2px">張訂單</div>
       </div>
       <div style="flex:1;padding:12px;background:#fff1f0;border-radius:10px">
         <div style="font-size:26px;font-weight:700;color:#e74c3c">${totalQty}</div>
@@ -255,15 +254,6 @@ function renderMyOrders() {
   if (myOrders.length === 0) return '<div class="empty">你還沒有訂單</div>';
   return myOrders.map(o => {
     const detail = o.items.map(i => i.name + " x" + i.qty + " ($" + i.price * i.qty + ")").join("、");
-    const remain = remainingEdits(o.editCount);
-    const actions = (canEdit(o.editCount) || canDelete(o.editCount))
-      ? `
-      <div style="font-size:11px;color:#999;margin-top:6px">還可修改/取消 ${remain} 次</div>
-      <div style="margin-top:8px">
-        ${canEdit(o.editCount) ? '<button class="btn-sm btn-edit" onclick="window._editOrder()">修改</button>' : ''}
-        ${canDelete(o.editCount) ? '<button class="btn-sm btn-del" onclick="window._cancelOrder()">取消</button>' : ''}
-      </div>`
-      : '<div style="font-size:11px;color:#999;margin-top:6px">訂單已達修改上限，如需調整請聯絡主辦</div>';
     return `
       <div class="order-item">
         <div class="order-name">
@@ -271,31 +261,76 @@ function renderMyOrders() {
         </div>
         <div class="order-detail">${esc(detail)}</div>
         <div class="order-total">合計 $${o.totalPrice}</div>
-        ${actions}
+        <div class="order-actions">
+          <button class="btn-sm btn-del" data-key="${esc(o.id)}" onclick="window._cancelOrder(this.getAttribute('data-key'))">取消</button>
+        </div>
       </div>`;
   }).join("");
 }
 
 async function listenOrders() {
   db.collection("fgq_events").doc(currentEventId).collection("orders")
-    .doc(currentUser.uid)
-    .onSnapshot(docSnap => {
-      myOrders = docSnap.exists ? [{ id: docSnap.id, ...docSnap.data() }] : [];
+    .where("createdBy", "==", currentUser.uid)
+    .onSnapshot(snap => {
+      myOrders = [];
+      snap.forEach(d => myOrders.push({ id: d.id, ...d.data() }));
       const el = document.getElementById("myOrdersList");
       if (el) el.innerHTML = renderMyOrders();
     }, err => console.error(err));
 
-  // 統計（多少人下單、多少數量）即時更新
+  // 統計（訂單數、總數量）與剩餘名額即時更新：用 snapshot 資料更新 counters 並重繪
   db.collection("fgq_events").doc(currentEventId).collection("counters")
-    .onSnapshot(() => {
+    .onSnapshot(snap => {
+      snap.forEach(d => { counters[d.id] = d.data().sold || 0; });
+      if (counters.__total === undefined) counters.__total = 0;
+      if (counters.__orders === undefined) counters.__orders = 0;
+      items.forEach(it => { if (counters[it.id] === undefined) counters[it.id] = 0; });
       const el = document.getElementById("statsList");
       if (el) el.innerHTML = renderStats();
+      renderItemsList();
     }, err => console.error(err));
+}
+
+// 重繪品項清單（剩餘名額、售完禁用、+ 上限）但不動整頁
+function renderItemsList() {
+  const el = document.getElementById("itemsList");
+  if (!el) return;
+  const deadlinePassed = eventData.deadline && eventData.deadline.toDate() < new Date();
+  el.innerHTML = items.map(it => {
+    const limit = it.limit || 0;
+    const sold = counters[it.id] || 0;
+    const remain = calculateRemaining(limit, sold);
+    const soldout = limit && remain <= 0;
+    const remainTxt = !limit ? "不限量" : (soldout ? "已售完" : "剩餘 " + remain + " 份");
+    const maxReached = limit && (selected[it.id] || 0) >= remain;
+    return `
+      <div class="item-row">
+        <input type="checkbox" class="item-check" data-id="${it.id}" ${soldout || deadlinePassed ? 'disabled' : ''} ${selected[it.id] ? 'checked' : ''} onchange="window._sel('${it.id}', this.checked)">
+        <div class="item-info">
+          <div class="item-name">${esc(it.name)}</div>
+          <div class="item-price">$${it.price}</div>
+          <div class="item-remain ${soldout ? 'soldout' : ''}">${remainTxt}</div>
+        </div>
+        <div class="qty-wrap">
+          <button ${soldout || deadlinePassed || (selected[it.id] || 0) <= 0 ? 'disabled' : ''} onclick="window._qty('${it.id}',-1)">-</button>
+          <span id="qty-${it.id}">${selected[it.id] || 0}</span>
+          <button ${soldout || deadlinePassed || maxReached ? 'disabled' : ''} onclick="window._qty('${it.id}',1)">+</button>
+        </div>
+      </div>`;
+  }).join("") || '<div class="empty">管理者尚未新增品項</div>';
 }
 
 // 全域函式（onclick 需掛 window）
 window._sel = function(id, checked) {
+  const it = items.find(i => i.id === id);
   if (checked) {
+    if (!it) return;
+    const limit = it.limit || 0;
+    const sold = counters[id] || 0;
+    const remain = calculateRemaining(limit, sold);
+    if (limit && remain <= 0) { showToast("此品項已售完"); return; }
+    const cb = document.querySelector(`.item-check[data-id="${id}"]`);
+    if (cb) cb.checked = true;
     if (!selected[id]) selected[id] = 1;
     document.getElementById("qty-" + id).textContent = selected[id];
   } else {
@@ -329,30 +364,6 @@ function updateTotal() {
   if (el) el.textContent = "$" + total;
 }
 
-window._editOrder = async function() {
-  const o = myOrders[0];
-  if (!o) return;
-  if (!canEdit(o.editCount)) { showToast("訂單已達修改上限，如需調整請聯絡主辦"); return; }
-  editing = true;
-  selected = {};
-  o.items.forEach(i => { selected[i.itemId] = i.qty; });
-  render();
-  document.getElementById("buyerName").value = o.buyerName;
-  try {
-    const pSnap = await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(currentUser.uid).get();
-    if (pSnap.exists) document.getElementById("phoneLast3").value = pSnap.data().phoneLast3 || "";
-  } catch (e) {}
-  showToast("請調整品項後點「更新訂單」");
-};
-
-window._cancelEdit = function() {
-  editing = false;
-  selected = {};
-  document.getElementById("buyerName").value = "";
-  document.getElementById("phoneLast3").value = "";
-  render();
-};
-
 window._submit = async function() {
   const name = document.getElementById("buyerName").value.trim();
   const phone = document.getElementById("phoneLast3").value.trim();
@@ -371,11 +382,8 @@ window._submit = async function() {
   const limits = {};
   items.forEach(it => { limits[it.id] = it.limit || 0; });
 
-  // 修改模式：走更新流程
-  if (editing) {
-    await updateOrder(name, phone, orderItems, totalPrice, limits);
-    return;
-  }
+  // 訂單 id = (後三碼 + 姓名) 推導鍵，同活動內同組合唯一
+  const orderKey = buildOrderKey(phone, name);
 
   const btn = document.getElementById("submitBtn");
   btn.disabled = true; btn.textContent = "送出中...";
@@ -391,42 +399,35 @@ window._submit = async function() {
       const check = validateOrderQty(orderItems, counterSnap, limits);
       if (!check.ok) throw new Error("部分品項數量不足");
 
-      const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc(currentUser.uid);
-      // 每人限一單：訂單已存在即拒絕，防止同 uid（即使管理員身份）第二單覆寫第一單
+      const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc(orderKey);
+      // 同組合已存在即拒絕（訂單已存在 → 寫入目標已存在，規則會擋 create）
       const orderSnap = await tx.get(orderRef);
       if (orderSnap.exists) {
-        throw new Error("你已經下過單了，每人限一單");
+        throw new Error("這個姓名與手機後三碼已下過單了，每人每組合限一單");
       }
       const now = firebase.firestore.FieldValue.serverTimestamp();
       tx.set(orderRef, {
+        orderKey,
         buyerName: name,
+        phoneLast3: phone,
         items: orderItems,
         totalPrice,
         createdBy: currentUser.uid,
         createdAt: now,
-        editCount: 0,
         isPaid: false
       });
-      // 更新 counters（只寫有下單的品項 + __total + __orders；每人一單，__orders 即下單人數）
+      // 更新 counters（只寫有下單的品項 + __total + __orders）
       const newCounters = applyOrderCounters(orderItems, counterSnap);
       newCounters.__orders = (counterSnap.__orders || 0) + 1;
       for (const key of ["__total", "__orders", ...orderItems.map(i => i.itemId)]) {
         tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: newCounters[key] });
       }
-      // 洗單防護：記錄下單時間
-      tx.set(db.collection("fgq_events").doc(currentEventId).collection("rate_limits").doc(currentUser.uid), {
+      // 洗單防護：以組合為鍵記錄下單時間
+      tx.set(db.collection("fgq_events").doc(currentEventId).collection("rate_limits").doc(orderKey), {
         lastOrderAt: now
       });
       return true;
     });
-    // 後三碼：order 建立後才寫入，規則才能驗證「該訂單是自己的」
-    try {
-      await db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(currentUser.uid).set({
-        phoneLast3: phone
-      });
-    } catch (e) {
-      console.warn("後三碼寫入失敗：", e.message);
-    }
     showToast("訂單已送出！");
     selected = {};
     document.getElementById("buyerName").value = "";
@@ -439,66 +440,18 @@ window._submit = async function() {
   btn.disabled = false; btn.textContent = "送出訂單";
 };
 
-async function updateOrder(name, phone, orderItems, totalPrice, limits) {
-  const btn = document.getElementById("submitBtn");
-  btn.disabled = true; btn.textContent = "更新中...";
-  try {
-    await db.runTransaction(async tx => {
-      const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc(currentUser.uid);
-      const orderSnap = await tx.get(orderRef);
-      if (!orderSnap.exists) throw new Error("訂單不存在");
-      const old = orderSnap.data();
-      if ((old.editCount || 0) >= 3) throw new Error("訂單已達修改上限，如需調整請聯絡主辦");
-      const counterSnap = {};
-      for (const key of ["__total", ...items.map(i => i.id)]) {
-        const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
-        const snap = await tx.get(ref);
-        counterSnap[key] = snap.exists ? (snap.data().sold || 0) : 0;
-      }
-      // 先釋放舊訂單再驗證，允許把原數量換到其他品項
-      const released = releaseOrderCounters(old.items, counterSnap);
-      const check = validateOrderQty(orderItems, released, limits);
-      if (!check.ok) throw new Error("部分品項數量不足");
-      const next = swapOrderCounters(old.items, orderItems, counterSnap);
-      tx.update(orderRef, {
-        buyerName: name,
-        items: orderItems,
-        totalPrice,
-        editCount: (old.editCount || 0) + 1
-      });
-      const keys = new Set(["__total", ...old.items.map(i => i.itemId), ...orderItems.map(i => i.itemId)]);
-      for (const key of keys) {
-        tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: next[key] });
-      }
-      // 後三碼更新（order 存在時本人可寫）
-      tx.set(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(currentUser.uid), { phoneLast3: phone });
-      return true;
-    });
-    showToast("訂單已更新");
-    editing = false;
-    selected = {};
-    document.getElementById("buyerName").value = "";
-    document.getElementById("phoneLast3").value = "";
-    await loadCounters();
-    render();
-  } catch (e) {
-    showToast("更新失敗：" + e.message);
-  }
-  btn.disabled = false; btn.textContent = "送出訂單";
-}
-
-window._cancelOrder = async function() {
-  const o = myOrders[0];
+window._cancelOrder = async function(orderKey) {
+  if (!orderKey) return;
+  const o = myOrders.find(x => x.id === orderKey);
   if (!o) return;
-  if (!canDelete(o.editCount)) { showToast("訂單已達修改上限，如需調整請聯絡主辦"); return; }
-  if (!confirm("確定取消訂單？取消後可重新下單。剩餘修改/取消次數：" + remainingEdits(o.editCount))) return;
+  if (!confirm("確定取消「" + o.buyerName + "」的訂單？取消後 10 秒內不能以相同姓名與後三碼重下。")) return;
   try {
     await db.runTransaction(async tx => {
-      const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc(currentUser.uid);
+      const orderRef = db.collection("fgq_events").doc(currentEventId).collection("orders").doc(orderKey);
       const orderSnap = await tx.get(orderRef);
       if (!orderSnap.exists) throw new Error("訂單不存在");
       const old = orderSnap.data();
-      if ((old.editCount || 0) >= 3) throw new Error("訂單已達修改上限");
+      if (old.createdBy !== currentUser.uid) throw new Error("只能取消自己的訂單");
       const counterSnap = {};
       for (const key of ["__total", "__orders", ...items.map(i => i.id)]) {
         const ref = db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key);
@@ -511,14 +464,13 @@ window._cancelOrder = async function() {
       for (const key of ["__total", "__orders", ...old.items.map(i => i.itemId)]) {
         tx.set(db.collection("fgq_events").doc(currentEventId).collection("counters").doc(key), { sold: next[key] });
       }
-      // 清除洗單防護，允許同一裝置重新下單
-      tx.delete(db.collection("fgq_events").doc(currentEventId).collection("rate_limits").doc(currentUser.uid));
-      // 後三碼刪除（order 尚存在時本人可刪）
-      tx.delete(db.collection("fgq_orders_phones").doc(currentEventId).collection("orders").doc(currentUser.uid));
+      // 洗單防護：取消後 10 秒內不可用相同組合重下（保留 rate_limits 並更新時間）
+      tx.set(db.collection("fgq_events").doc(currentEventId).collection("rate_limits").doc(orderKey), {
+        lastOrderAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
       return true;
     });
     showToast("訂單已取消");
-    editing = false;
     selected = {};
     document.getElementById("buyerName").value = "";
     document.getElementById("phoneLast3").value = "";

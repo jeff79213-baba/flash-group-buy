@@ -3,8 +3,7 @@ import {
   calculateRemaining,
   validateOrderQty,
   releaseOrderCounters,
-  applyOrderCounters,
-  swapOrderCounters
+  applyOrderCounters
 } from "../../lib/quantity.js";
 
 describe("calculateRemaining", () => {
@@ -62,15 +61,5 @@ describe("releaseOrderCounters / applyOrderCounters", () => {
     );
     expect(next.a).toBe(13);
     expect(next.__total).toBe(23);
-  });
-  it("swap：換單釋放舊數量並套用新數量", () => {
-    const next = swapOrderCounters(
-      [{ itemId: "a", qty: 2 }],
-      [{ itemId: "b", qty: 3 }],
-      { a: 10, b: 1, __total: 11 }
-    );
-    expect(next.a).toBe(8);
-    expect(next.b).toBe(4);
-    expect(next.__total).toBe(12);
   });
 });
