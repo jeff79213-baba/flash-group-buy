@@ -82,8 +82,11 @@ service cloud.firestore {
       // 訂單：訂單 id = orderKey（後三碼_姓名），同活動內 (姓名+後三碼) 唯一
       match /orders/{orderId} {
         // 只能讀自己的單，或管理員讀全部
+        // resource == null：文件不存在（如 transaction 內 get 不存在的 order）也允許，避免 403
         allow read: if isLoggedIn()
-          && (resource.data.createdBy == request.auth.uid || isAdmin(eventId));
+          && (resource == null
+              || resource.data.createdBy == request.auth.uid
+              || isAdmin(eventId));
 
         // 下單：訂單 id 必須等於 orderKey 欄位、createdBy=自己、
         //       姓名非空、後三碼 3 位數字、isPaid=false、品項非空、
